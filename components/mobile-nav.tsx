@@ -71,7 +71,7 @@ export function MobileNav({ mode, collaboratorName }: MobileNavProps) {
           <img src="/icon.jpg" alt="Logo" className="object-cover" />
         </div>
         <div>
-          <span className="block text-base font-semibold">Distribuidora</span>
+          <span className="block text-base font-semibold">Zequinha Pneus</span>
           <span className="text-xs text-muted-foreground">{subtitle}</span>
         </div>
       </div>

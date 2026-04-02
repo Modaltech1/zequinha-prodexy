@@ -1,5 +1,5 @@
 // public/sw.js
-const CACHE_NAME = 'modaltech-pwa-v1'
+const CACHE_NAME = 'prodexy-pwa-v1'
 
 // páginas básicas para cachear na instalação (ajuste se quiser)
 const URLS_TO_CACHE = ['/', '/login']

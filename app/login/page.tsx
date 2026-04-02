@@ -69,7 +69,7 @@ function LoginPageInner() {
             <img src="/icon.jpg" alt="Logo" className="object-cover" />
           </div>
           <div>
-            <CardTitle className="text-2xl">Distribuidora</CardTitle>
+            <CardTitle className="text-2xl">Zequinha Pneus</CardTitle>
             <CardDescription>Acesse o sistema com seu email e senha.</CardDescription>
           </div>
         </CardHeader>

@@ -34,7 +34,7 @@ export function NavContent({
                         <img src="/icon.jpg" alt="Logo" className="object-cover" />
                     </div>
                     <div>
-                        <span className="block text-lg font-semibold">Distribuidora</span>
+                        <span className="block text-lg font-semibold">Zequinha Pneus</span>
                         <span className="text-xs text-muted-foreground">{subtitle}</span>
                     </div>
                 </div>

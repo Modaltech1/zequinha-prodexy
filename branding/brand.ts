@@ -1,6 +1,6 @@
 export const brand = {
-  appName: 'Ceará Distribuidora',
-  description: 'Sistema completo de gestão de distribuidora de bebidas.',
+  appName: 'Zequinha Pneus',
+  description: 'Sistema completo de gestão de oficina mecânica.',
   logoUrl: '/icon.jpg',
   colors: {
     primary: '#c6bb23',
