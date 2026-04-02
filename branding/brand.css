@@ -1,0 +1,42 @@
+:root {
+  --background: #f5f1eb;
+  --foreground: #1f2937;
+
+  --card: #ffffff;
+  --card-foreground: #1f2937;
+
+  --popover: #ffffff;
+  --popover-foreground: #1f2937;
+
+  --primary: #b41409;
+  --primary-foreground: #ffffff;
+
+  --secondary: #e5ded3;
+  --secondary-foreground: #243041;
+
+  --muted: #ebe5dc;
+  --muted-foreground: #5b6472;
+
+  --accent: #374151;
+  --accent-foreground: #ffffff;
+
+  --destructive: #b91c1c;
+  --destructive-foreground: #ffffff;
+
+  --border: #d6cbbb;
+  --input: #f8f4ee;
+  --ring: #b45309;
+
+  --sidebar: #efe7dc;
+  --sidebar-foreground: #243041;
+  --sidebar-primary: #b45309;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #374151;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #d6cbbb;
+  --sidebar-ring: #b45309;
+
+  --radius: 12px;
+  --font-heading: "Poppins", sans-serif;
+  --font-body: "Inter", sans-serif;
+}

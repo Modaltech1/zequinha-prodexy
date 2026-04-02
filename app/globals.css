@@ -1,0 +1,10 @@
+@import "@prodexy/ui/styles.css";
+@import "../branding/brand.css";
+
+@source "../node_modules/@prodexy/ui/dist/**/*.{js,mjs}";
+@source "../node_modules/@prodexy/ui/src/**/*.{ts,tsx}";
+
+/* se quiser, pode deixar alguma regra mínima específica do projeto aqui */
+body {
+  font-family: var(--font-body);
+}
