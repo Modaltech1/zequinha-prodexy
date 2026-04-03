@@ -4,11 +4,7 @@
 import Link from 'next/link'
 import { LogOut } from 'lucide-react'
 import { Button, cn } from '@prodexy/ui'
-import {
-    getMenuItems,
-    getPanelSubtitle,
-    type NavMode,
-} from '@/components/navigation/config'
+import { getMenuItems, getPanelSubtitle, type NavMode, } from '@/components/navigation/config'
 
 type NavContentProps = {
     mode: NavMode
@@ -17,12 +13,7 @@ type NavContentProps = {
     onLogout: () => void
 }
 
-export function NavContent({
-    mode,
-    pathname,
-    collaboratorName,
-    onLogout,
-}: NavContentProps) {
+export function NavContent({ mode, pathname, collaboratorName, onLogout, }: NavContentProps) {
     const menuItems = getMenuItems(mode)
     const subtitle = getPanelSubtitle(mode, collaboratorName)
 

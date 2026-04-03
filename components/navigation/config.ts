@@ -1,6 +1,6 @@
 // components/navigation/config.ts
 import type { LucideIcon } from 'lucide-react'
-import { Users } from 'lucide-react'
+import { IdCardLanyard, LayoutDashboard, Users } from 'lucide-react'
 
 export type NavMode = 'admin' | 'colaborador'
 
@@ -14,9 +14,14 @@ export function getMenuItems(mode: NavMode): NavItem[] {
     if (mode === 'admin') {
         return [
             {
+                href: '/admin/dashboard',
+                label: 'Dashboard',
+                icon: LayoutDashboard,
+            },
+            {
                 href: '/admin/colaboradores',
                 label: 'Colaboradores',
-                icon: Users,
+                icon: IdCardLanyard,
             },
         ]
     }

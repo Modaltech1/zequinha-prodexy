@@ -43,7 +43,7 @@ function LoginPageInner() {
       }
 
       if (perfil.papel === 'admin') {
-        router.push('/admin/colaboradores')
+        router.push('/admin/dashboard')
         router.refresh()
         return
       }
