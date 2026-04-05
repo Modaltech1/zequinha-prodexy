@@ -19,6 +19,11 @@ export function getMenuItems(mode: NavMode): NavItem[] {
                 icon: LayoutDashboard,
             },
             {
+                href: '/admin/clientes',
+                label: 'Clientes',
+                icon: Users,
+            },
+            {
                 href: '/admin/colaboradores',
                 label: 'Colaboradores',
                 icon: IdCardLanyard,
@@ -30,7 +35,7 @@ export function getMenuItems(mode: NavMode): NavItem[] {
         {
             href: '/colaborador/pagina',
             label: 'Página',
-            icon: Users,
+            icon: IdCardLanyard,
         },
     ]
 }
