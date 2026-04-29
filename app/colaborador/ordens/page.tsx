@@ -11,12 +11,12 @@ import { Search, Wrench, Car, CheckCircle2, Plus, Pencil, Trash2, Camera } from 
 import { supabase } from '@/lib/supabaseClient'
 import { OrderDetailsDialog, type OrdemServicoDetails } from '@/components/order-details-dialog'
 import { OrderDialog, type OrdemServicoEdit } from '@/components/order-dialog'
-import { OrdersView } from '@/components/orders-view'
 
 type OrdemRow = {
   id: string
   numero: string | null
   cliente_id: string | null
+  veiculo_id: string | null
   veiculo_placa: string | null
   veiculo_marca: string | null
   veiculo_modelo: string | null
@@ -56,9 +56,20 @@ type OrdemFoto = {
   criado_em: string
 }
 
+type VeiculoRow = {
+  id: string
+  cliente_id: string
+  placa: string | null
+  marca: string | null
+  modelo: string | null
+  ano: string | null
+  cor: string | null
+}
+
 export default function Page() {
   const [orders, setOrders] = useState<OrdemRow[]>([])
   const [customers, setCustomers] = useState<Record<string, Cliente>>({})
+  const [vehicles, setVehicles] = useState<Record<string, VeiculoRow>>({})
   const [serviceRowsByOrder, setServiceRowsByOrder] = useState<Record<string, OrdemServicoItemRow[]>>({})
   const [services, setServices] = useState<Record<string, Servico>>({})
   const [photosByOrder, setPhotosByOrder] = useState<Record<string, OrdemFoto[]>>({})
@@ -76,9 +87,10 @@ export default function Page() {
   async function loadOrders() {
     setLoading(true)
 
-    const [ordensRes, clientesRes, ordemServicosRes, servicosRes, fotosRes] = await Promise.all([
+    const [ordensRes, clientesRes, veiculosRes, ordemServicosRes, servicosRes, fotosRes] = await Promise.all([
       supabase.from('ordens_de_servico').select('*').order('criado_em', { ascending: false }),
       supabase.from('clientes').select('id,nome,telefone'),
+      supabase.from('veiculos').select('id,cliente_id,placa,marca,modelo,ano,cor'),
       supabase.from('ordem_servicos').select('id,os_id,servico_id,valor'),
       supabase.from('servicos').select('id,nome,valor'),
       supabase.from('ordem_fotos').select('id,os_id,foto_url,criado_em').order('criado_em', { ascending: true }),
@@ -86,6 +98,7 @@ export default function Page() {
 
     if (ordensRes.error) console.error(ordensRes.error)
     if (clientesRes.error) console.error(clientesRes.error)
+    if (veiculosRes.error) console.error(veiculosRes.error)
     if (ordemServicosRes.error) console.error(ordemServicosRes.error)
     if (servicosRes.error) console.error(servicosRes.error)
     if (fotosRes.error) console.error(fotosRes.error)
@@ -100,6 +113,13 @@ export default function Page() {
 
     setCustomers(
       (((clientesRes.data as Cliente[]) || []).reduce<Record<string, Cliente>>((acc, item) => {
+        acc[item.id] = item
+        return acc
+      }, {}))
+    )
+
+    setVehicles(
+      (((veiculosRes.data as VeiculoRow[]) || []).reduce<Record<string, VeiculoRow>>((acc, item) => {
         acc[item.id] = item
         return acc
       }, {}))
@@ -144,13 +164,14 @@ export default function Page() {
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
       const customer = order.cliente_id ? customers[order.cliente_id] : undefined
+      const vehicle = order.veiculo_id ? vehicles[order.veiculo_id] : undefined
 
       const searchable = [
         order.numero || '',
         customer?.nome || '',
-        order.veiculo_placa || '',
-        order.veiculo_marca || '',
-        order.veiculo_modelo || '',
+        vehicle?.placa || order.veiculo_placa || '',
+        vehicle?.marca || order.veiculo_marca || '',
+        vehicle?.modelo || order.veiculo_modelo || '',
       ]
         .join(' ')
         .toLowerCase()
@@ -159,10 +180,11 @@ export default function Page() {
       const matchesStatus = statusFilter === 'todos' ? true : (order.status || '') === statusFilter
       return matchesSearch && matchesStatus
     })
-  }, [orders, customers, searchTerm, statusFilter])
+  }, [orders, customers, vehicles, searchTerm, statusFilter])
 
   function buildOrderDetails(order: OrdemRow): OrdemServicoDetails {
     const customer = order.cliente_id ? customers[order.cliente_id] : undefined
+    const vehicle = order.veiculo_id ? vehicles[order.veiculo_id] : undefined
     const itens = (serviceRowsByOrder[order.id] || []).map((item) => ({
       id: item.id,
       nome: services[item.servico_id]?.nome || 'Serviço não identificado',
@@ -180,11 +202,11 @@ export default function Page() {
       atualizado_em: order.atualizado_em,
       cliente_nome: customer?.nome || 'Cliente não identificado',
       cliente_telefone: customer?.telefone || '',
-      veiculo_placa: order.veiculo_placa,
-      veiculo_marca: order.veiculo_marca,
-      veiculo_modelo: order.veiculo_modelo,
-      veiculo_ano: order.veiculo_ano,
-      veiculo_cor: order.veiculo_cor,
+      veiculo_placa: vehicle?.placa || order.veiculo_placa,
+      veiculo_marca: vehicle?.marca || order.veiculo_marca,
+      veiculo_modelo: vehicle?.modelo || order.veiculo_modelo,
+      veiculo_ano: vehicle?.ano || order.veiculo_ano,
+      veiculo_cor: vehicle?.cor || order.veiculo_cor,
       servicos: itens,
       fotos: (photosByOrder[order.id] || []).map((foto) => ({
         id: foto.id,
@@ -194,6 +216,7 @@ export default function Page() {
   }
 
   function buildEditOrder(order: OrdemRow): OrdemServicoEdit {
+    const vehicle = order.veiculo_id ? vehicles[order.veiculo_id] : undefined
     const itens = (serviceRowsByOrder[order.id] || []).map((item) => ({
       id: item.id,
       servico_id: item.servico_id,
@@ -205,11 +228,12 @@ export default function Page() {
       id: order.id,
       numero: order.numero,
       cliente_id: order.cliente_id,
-      veiculo_placa: order.veiculo_placa,
-      veiculo_marca: order.veiculo_marca,
-      veiculo_modelo: order.veiculo_modelo,
-      veiculo_ano: order.veiculo_ano,
-      veiculo_cor: order.veiculo_cor,
+      veiculo_id: order.veiculo_id,
+      veiculo_placa: vehicle?.placa || order.veiculo_placa,
+      veiculo_marca: vehicle?.marca || order.veiculo_marca,
+      veiculo_modelo: vehicle?.modelo || order.veiculo_modelo,
+      veiculo_ano: vehicle?.ano || order.veiculo_ano,
+      veiculo_cor: vehicle?.cor || order.veiculo_cor,
       valor_total: order.valor_total,
       valor_final: order.valor_final,
       status: order.status,
@@ -291,12 +315,12 @@ export default function Page() {
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
                 className="pl-9"
                 placeholder="Buscar por número, cliente, placa, marca ou modelo"
               />
             </div>
-            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as any)}>
+            <Select value={statusFilter} onValueChange={(value: string) => setStatusFilter(value as any)}>
               <SelectTrigger className="w-full sm:w-[220px]">
                 <SelectValue placeholder="Filtrar status" />
               </SelectTrigger>
@@ -319,6 +343,8 @@ export default function Page() {
 
           {filteredOrders.map((order) => {
             const customer = order.cliente_id ? customers[order.cliente_id] : undefined
+          const vehicle = order.veiculo_id ? vehicles[order.veiculo_id] : undefined
+          const vehicleLabel = `${vehicle?.marca || order.veiculo_marca || '-'} ${vehicle?.modelo || order.veiculo_modelo || ''} ${(vehicle?.placa || order.veiculo_placa) ? `• ${vehicle?.placa || order.veiculo_placa}` : ''}`
             const itemCount = (serviceRowsByOrder[order.id] || []).length
             const photosCount = (photosByOrder[order.id] || []).length
 
@@ -334,7 +360,7 @@ export default function Page() {
                     </div>
 
                     <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-2 xl:grid-cols-3">
-                      <InfoLine icon={Car} text={`${order.veiculo_marca || '-'} ${order.veiculo_modelo || ''} ${order.veiculo_placa ? `• ${order.veiculo_placa}` : ''}`} />
+                      <InfoLine icon={Car} text={vehicleLabel} />
                       <InfoLine icon={Wrench} text={`${itemCount} serviço(s)`} />
                       <InfoLine icon={Camera} text={`${photosCount} foto(s)`} />
                       <p><span className="font-medium text-foreground">Cliente:</span> {customer?.nome || 'Cliente não identificado'}</p>

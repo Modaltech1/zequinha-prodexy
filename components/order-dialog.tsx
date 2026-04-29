@@ -35,6 +35,7 @@ export type OrdemServicoEdit = {
     id: string
     numero: string | null
     cliente_id: string | null
+    veiculo_id?: string | null
     veiculo_placa: string | null
     veiculo_marca: string | null
     veiculo_modelo: string | null
@@ -71,15 +72,29 @@ type ServicoSelecionado = {
     valor: string
 }
 
+type VeiculoOption = {
+    id: string
+    cliente_id: string
+    placa: string | null
+    marca: string | null
+    modelo: string | null
+    ano: string | null
+    cor: string | null
+    km_atual: number | null
+}
+
 export function OrderDialog({ open, onOpenChange, order, onSaved }: Props) {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
     const [clientes, setClientes] = useState<ClienteOption[]>([])
     const [servicosDisponiveis, setServicosDisponiveis] = useState<ServicoOption[]>([])
+    const [veiculos, setVeiculos] = useState<VeiculoOption[]>([])
 
     const [numero, setNumero] = useState('')
     const [clienteId, setClienteId] = useState('')
+    const [veiculoId, setVeiculoId] = useState('')
+    const [isNovoVeiculo, setIsNovoVeiculo] = useState(true)
     const [veiculoPlaca, setVeiculoPlaca] = useState('')
     const [veiculoMarca, setVeiculoMarca] = useState('')
     const [veiculoModelo, setVeiculoModelo] = useState('')
@@ -122,14 +137,54 @@ export function OrderDialog({ open, onOpenChange, order, onSaved }: Props) {
         }
     }
 
+    async function loadVehiclesByCustomer(customerId: string) {
+        if (!customerId) {
+            setVeiculos([])
+            return
+        }
+
+        const { data, error } = await supabase
+            .from('veiculos')
+            .select('id, cliente_id, placa, marca, modelo, ano, cor, km_atual')
+            .eq('cliente_id', customerId)
+            .order('placa', { ascending: true })
+
+        if (error) {
+            console.error('Erro ao carregar veículos:', error)
+            setVeiculos([])
+            return
+        }
+
+        setVeiculos((data as VeiculoOption[]) || [])
+    }
+
     useEffect(() => {
         if (open) loadBaseData()
     }, [open])
 
     useEffect(() => {
+        if (!open) return
+        loadVehiclesByCustomer(clienteId)
+    }, [clienteId, open])
+
+    useEffect(() => {
+        if (!veiculoId) return
+        const selected = veiculos.find((item) => item.id === veiculoId)
+        if (!selected) return
+
+        setVeiculoPlaca(selected.placa || '')
+        setVeiculoMarca(selected.marca || '')
+        setVeiculoModelo(selected.modelo || '')
+        setVeiculoAno(selected.ano || '')
+        setVeiculoCor(selected.cor || '')
+    }, [veiculoId, veiculos])
+
+    useEffect(() => {
         if (order) {
             setNumero(order.numero || '')
             setClienteId(order.cliente_id || '')
+            setVeiculoId(order.veiculo_id || '')
+            setIsNovoVeiculo(!order.veiculo_id)
             setVeiculoPlaca(order.veiculo_placa || '')
             setVeiculoMarca(order.veiculo_marca || '')
             setVeiculoModelo(order.veiculo_modelo || '')
@@ -148,6 +203,8 @@ export function OrderDialog({ open, onOpenChange, order, onSaved }: Props) {
         } else {
             setNumero('')
             setClienteId('')
+            setVeiculoId('')
+            setIsNovoVeiculo(true)
             setVeiculoPlaca('')
             setVeiculoMarca('')
             setVeiculoModelo('')
@@ -257,16 +314,65 @@ export function OrderDialog({ open, onOpenChange, order, onSaved }: Props) {
 
         try {
             if (!clienteId) throw new Error('Selecione um cliente.')
+            if (!isNovoVeiculo && !veiculoId) throw new Error('Selecione um veículo ou cadastre um novo.')
+            if (isNovoVeiculo && !veiculoPlaca.trim()) throw new Error('Informe a placa do veículo.')
             if (servicos.length === 0) throw new Error('Adicione pelo menos um serviço.')
+
+            let finalVeiculoId = veiculoId || null
+            let finalVeiculoPlaca = veiculoPlaca.trim() || null
+            let finalVeiculoMarca = veiculoMarca.trim() || null
+            let finalVeiculoModelo = veiculoModelo.trim() || null
+            let finalVeiculoAno = veiculoAno.trim() || null
+            let finalVeiculoCor = veiculoCor.trim() || null
+
+            if (isNovoVeiculo) {
+                const payloadVeiculo = {
+                    cliente_id: clienteId,
+                    placa: finalVeiculoPlaca,
+                    marca: finalVeiculoMarca,
+                    modelo: finalVeiculoModelo,
+                    ano: finalVeiculoAno,
+                    cor: finalVeiculoCor,
+                    atualizado_em: new Date().toISOString(),
+                }
+
+                const { data: veiculoData, error: veiculoError } = await supabase
+                    .from('veiculos')
+                    .insert({
+                        ...payloadVeiculo,
+                        criado_em: new Date().toISOString(),
+                    })
+                    .select('id, placa, marca, modelo, ano, cor')
+                    .single()
+
+                if (veiculoError) throw veiculoError
+
+                finalVeiculoId = veiculoData.id
+                finalVeiculoPlaca = veiculoData.placa || finalVeiculoPlaca
+                finalVeiculoMarca = veiculoData.marca || finalVeiculoMarca
+                finalVeiculoModelo = veiculoData.modelo || finalVeiculoModelo
+                finalVeiculoAno = veiculoData.ano || finalVeiculoAno
+                finalVeiculoCor = veiculoData.cor || finalVeiculoCor
+            } else {
+                const selected = veiculos.find((item) => item.id === veiculoId)
+                if (!selected) throw new Error('Veículo selecionado não encontrado para o cliente.')
+
+                finalVeiculoPlaca = selected.placa || finalVeiculoPlaca
+                finalVeiculoMarca = selected.marca || finalVeiculoMarca
+                finalVeiculoModelo = selected.modelo || finalVeiculoModelo
+                finalVeiculoAno = selected.ano || finalVeiculoAno
+                finalVeiculoCor = selected.cor || finalVeiculoCor
+            }
 
             const payload = {
                 numero: numero.trim() || null,
                 cliente_id: clienteId || null,
-                veiculo_placa: veiculoPlaca.trim() || null,
-                veiculo_marca: veiculoMarca.trim() || null,
-                veiculo_modelo: veiculoModelo.trim() || null,
-                veiculo_ano: veiculoAno.trim() || null,
-                veiculo_cor: veiculoCor.trim() || null,
+                veiculo_id: finalVeiculoId,
+                veiculo_placa: finalVeiculoPlaca,
+                veiculo_marca: finalVeiculoMarca,
+                veiculo_modelo: finalVeiculoModelo,
+                veiculo_ano: finalVeiculoAno,
+                veiculo_cor: finalVeiculoCor,
                 valor_total: valorTotal,
                 valor_final: valorTotal,
                 status,
@@ -405,12 +511,24 @@ export function OrderDialog({ open, onOpenChange, order, onSaved }: Props) {
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <div className="space-y-2">
                             <Label htmlFor="numero">Número da OS</Label>
-                            <Input id="numero" value={numero} placeholder="2025-001" onChange={(e) => setNumero(e.target.value)} />
+                            <Input id="numero" value={numero} placeholder="2025-001" onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNumero(e.target.value)} />
                         </div>
 
                         <div className="space-y-2 lg:col-span-2">
                             <Label>Cliente</Label>
-                            <Select value={clienteId} onValueChange={setClienteId}>
+                            <Select
+                                value={clienteId}
+                                onValueChange={(value: string) => {
+                                    setClienteId(value)
+                                    setVeiculoId('')
+                                    setIsNovoVeiculo(true)
+                                    setVeiculoPlaca('')
+                                    setVeiculoMarca('')
+                                    setVeiculoModelo('')
+                                    setVeiculoAno('')
+                                    setVeiculoCor('')
+                                }}
+                            >
                                 <SelectTrigger>
                                     <SelectValue placeholder="Selecione o cliente" />
                                 </SelectTrigger>
@@ -424,25 +542,104 @@ export function OrderDialog({ open, onOpenChange, order, onSaved }: Props) {
                             </Select>
                         </div>
 
+                        <div className="space-y-2 lg:col-span-3">
+                            <Label>Veículo</Label>
+                            <div className="flex flex-col gap-2 sm:flex-row">
+                                <Select
+                                    value={veiculoId}
+                                    onValueChange={(value: string) => {
+                                        setVeiculoId(value)
+                                        setIsNovoVeiculo(false)
+                                    }}
+                                    disabled={!clienteId || veiculos.length === 0}
+                                >
+                                    <SelectTrigger className="flex-1">
+                                        <SelectValue
+                                            placeholder={
+                                                !clienteId
+                                                    ? 'Selecione um cliente primeiro'
+                                                    : veiculos.length === 0
+                                                        ? 'Nenhum veículo cadastrado'
+                                                        : 'Selecione um veículo cadastrado'
+                                            }
+                                        />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {veiculos.map((veiculo) => (
+                                            <SelectItem key={veiculo.id} value={veiculo.id}>
+                                                {(veiculo.placa || 'Sem placa')} - {[veiculo.marca, veiculo.modelo].filter(Boolean).join(' ')}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => {
+                                        setIsNovoVeiculo(true)
+                                        setVeiculoId('')
+                                        setVeiculoPlaca('')
+                                        setVeiculoMarca('')
+                                        setVeiculoModelo('')
+                                        setVeiculoAno('')
+                                        setVeiculoCor('')
+                                    }}
+                                    disabled={!clienteId}
+                                >
+                                    Cadastrar novo veículo
+                                </Button>
+                            </div>
+                        </div>
+
                         <div className="space-y-2">
                             <Label htmlFor="placa">Placa</Label>
-                            <Input id="placa" value={veiculoPlaca} placeholder="ABC1D23" onChange={(e) => setVeiculoPlaca(e.target.value)} />
+                            <Input
+                                id="placa"
+                                value={veiculoPlaca}
+                                placeholder="ABC1D23"
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setVeiculoPlaca(e.target.value)}
+                                disabled={!isNovoVeiculo}
+                            />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="marca">Marca</Label>
-                            <Input id="marca" value={veiculoMarca} placeholder="Fiat" onChange={(e) => setVeiculoMarca(e.target.value)} />
+                            <Input
+                                id="marca"
+                                value={veiculoMarca}
+                                placeholder="Fiat"
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setVeiculoMarca(e.target.value)}
+                                disabled={!isNovoVeiculo}
+                            />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="modelo">Modelo</Label>
-                            <Input id="modelo" value={veiculoModelo} placeholder="Uno Way" onChange={(e) => setVeiculoModelo(e.target.value)} />
+                            <Input
+                                id="modelo"
+                                value={veiculoModelo}
+                                placeholder="Uno Way"
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setVeiculoModelo(e.target.value)}
+                                disabled={!isNovoVeiculo}
+                            />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="ano">Ano</Label>
-                            <Input id="ano" value={veiculoAno} placeholder="2018" onChange={(e) => setVeiculoAno(e.target.value)} />
+                            <Input
+                                id="ano"
+                                value={veiculoAno}
+                                placeholder="2018"
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setVeiculoAno(e.target.value)}
+                                disabled={!isNovoVeiculo}
+                            />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="cor">Cor</Label>
-                            <Input id="cor" value={veiculoCor} placeholder="prata" onChange={(e) => setVeiculoCor(e.target.value)} />
+                            <Input
+                                id="cor"
+                                value={veiculoCor}
+                                placeholder="prata"
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setVeiculoCor(e.target.value)}
+                                disabled={!isNovoVeiculo}
+                            />
                         </div>
                         <div className="space-y-2">
                             <Label>Status</Label>
@@ -494,7 +691,7 @@ export function OrderDialog({ open, onOpenChange, order, onSaved }: Props) {
                                         <Input
                                             value={servico.valor}
                                             placeholder="Ex.: 120,00"
-                                            onChange={(e) => handleServicoValorChange(index, e.target.value)}
+                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleServicoValorChange(index, e.target.value)}
                                         />
                                     </div>
                                     <div className="flex items-end">
@@ -526,13 +723,13 @@ export function OrderDialog({ open, onOpenChange, order, onSaved }: Props) {
                                 type="file"
                                 accept="image/*"
                                 multiple
-                                onChange={(e) => handleAddFiles(e.target.files)}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleAddFiles(e.target.files)}
                             />
                             <Input
                                 type="file"
                                 accept="image/*"
                                 capture="environment"
-                                onChange={(e) => handleAddFiles(e.target.files)}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleAddFiles(e.target.files)}
                             />
                         </div>
 
@@ -572,7 +769,7 @@ export function OrderDialog({ open, onOpenChange, order, onSaved }: Props) {
                         <Textarea
                             id="observacoes"
                             value={observacoes}
-                            onChange={(e) => setObservacoes(e.target.value)}
+                            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setObservacoes(e.target.value)}
                             placeholder="Detalhes adicionais da OS..."
                         />
                     </div>
