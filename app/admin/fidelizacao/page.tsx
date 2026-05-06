@@ -271,6 +271,7 @@ export default function Page() {
   }, [nextPendingByVehicleId])
 
   function startVehicleEditing(vehicle: VeiculoRow) {
+    setExpandedVehicleId(vehicle.id)
     setEditingVehicleId(vehicle.id)
     setVehicleForm({
       placa: vehicle.placa || '',
