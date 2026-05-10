@@ -49,7 +49,7 @@ function LoginPageInner() {
       }
 
       if (perfil.papel === 'colaborador') {
-        router.push('/colaborador/pagina')
+        router.push('/colaborador/ordens')
         router.refresh()
         return
       }

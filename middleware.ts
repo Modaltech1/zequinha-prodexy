@@ -58,14 +58,14 @@ export async function middleware(request: NextRequest) {
   if (pathname === '/') {
     if (!user || !perfil || !perfil.ativo) return NextResponse.redirect(new URL('/login', request.url))
     if (perfil.papel === 'admin') return NextResponse.redirect(new URL('/admin/dashboard', request.url))
-    if (perfil.papel === 'colaborador') return NextResponse.redirect(new URL('/colaborador/pagina', request.url))
+    if (perfil.papel === 'colaborador') return NextResponse.redirect(new URL('/colaborador/ordens', request.url))
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
   if (isAuthRoute) {
     if (!user || !perfil || !perfil.ativo) return response
     if (perfil.papel === 'admin') return NextResponse.redirect(new URL('/admin/dashboard', request.url))
-    if (perfil.papel === 'colaborador') return NextResponse.redirect(new URL('/colaborador/pagina', request.url))
+    if (perfil.papel === 'colaborador') return NextResponse.redirect(new URL('/colaborador/ordens', request.url))
     return response
   }
 
