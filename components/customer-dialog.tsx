@@ -1,17 +1,28 @@
 // components/customer-dialog.tsx
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Button, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, Input, Label } from '@prodexy/ui'
+import { useEffect, useState, type FormEvent } from 'react'
+import {
+    Button,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+    Input,
+    Label,
+} from '@prodexy/ui'
 import { supabase } from '@/lib/supabaseClient'
 
 interface Customer {
     id: string
     nome: string
-    telefone: string
-    cpf_cnpj: string
-    totalPurchases: number
-    pendingAmount: number
+    telefone: string | null
+    cpf_cnpj: string | null
+    nascimento: string | null
+    totalPurchases?: number
+    totalOrders?: number
 }
 
 interface CustomerDialogProps {
@@ -21,57 +32,71 @@ interface CustomerDialogProps {
     onSaved?: () => void
 }
 
-export function CustomerDialog({ open, onOpenChange, customer, onSaved, }: CustomerDialogProps) {
+export function CustomerDialog({
+    open,
+    onOpenChange,
+    customer,
+    onSaved,
+}: CustomerDialogProps) {
     const [formData, setFormData] = useState({
         nome: '',
         telefone: '',
         cpf_cnpj: '',
+        nascimento: '',
     })
+
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
         if (customer) {
             setFormData({
-                nome: customer.nome,
+                nome: customer.nome ?? '',
                 telefone: customer.telefone ?? '',
                 cpf_cnpj: customer.cpf_cnpj ?? '',
+                nascimento: customer.nascimento ?? '',
             })
         } else {
             setFormData({
                 nome: '',
                 telefone: '',
                 cpf_cnpj: '',
+                nascimento: '',
             })
         }
+
         setError(null)
     }, [customer, open])
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: FormEvent) => {
         e.preventDefault()
         setError(null)
         setLoading(true)
 
         try {
-            const payload: any = {
+            const payload = {
                 nome: formData.nome.trim(),
-                telefone: formData.telefone.trim(),
+                telefone: formData.telefone.trim() || null,
                 cpf_cnpj: formData.cpf_cnpj.trim() || null,
+                nascimento: formData.nascimento || null,
+            }
+
+            if (!payload.nome) {
+                throw new Error('Informe o nome do cliente.')
             }
 
             if (customer) {
-                // update
                 const { error } = await supabase
                     .from('clientes')
-                    .update({
-                        ...payload,
-                    })
+                    .update(payload)
                     .eq('id', customer.id)
 
                 if (error) throw error
             } else {
-                // insert
-                const { error } = await supabase.from('clientes').insert(payload)
+                const { error } = await supabase
+                    .from('clientes')
+                    .insert(payload)
+
                 if (error) throw error
             }
 
@@ -79,7 +104,7 @@ export function CustomerDialog({ open, onOpenChange, customer, onSaved, }: Custo
             onOpenChange(false)
         } catch (err: any) {
             console.error('Erro ao salvar cliente', err)
-            setError('Erro ao salvar cliente. Tente novamente.')
+            setError(err?.message || 'Erro ao salvar cliente. Tente novamente.')
         } finally {
             setLoading(false)
         }
@@ -87,21 +112,23 @@ export function CustomerDialog({ open, onOpenChange, customer, onSaved, }: Custo
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[500px]">
+            <DialogContent className="sm:max-w-[560px]">
                 <DialogHeader>
                     <DialogTitle>
                         {customer ? 'Editar Cliente' : 'Novo Cliente'}
                     </DialogTitle>
-                    <DialogDescription>Preencha os dados do cliente.</DialogDescription>
+                    <DialogDescription>
+                        Preencha os dados do cliente. A data de nascimento é opcional e será usada para relacionamento.
+                    </DialogDescription>
                 </DialogHeader>
 
                 {error && (
-                    <p className="text-sm text-destructive mb-2">{error}</p>
+                    <p className="mb-2 text-sm text-destructive">{error}</p>
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="space-y-2">
-                        <Label htmlFor="name">Nome Completo</Label>
+                        <Label htmlFor="name">Nome completo</Label>
                         <Input
                             id="name"
                             value={formData.nome}
@@ -118,11 +145,11 @@ export function CustomerDialog({ open, onOpenChange, customer, onSaved, }: Custo
                                 placeholder="(11) 98765-4321"
                                 value={formData.telefone}
                                 onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
-                                required
                             />
                         </div>
+
                         <div className="space-y-2">
-                            <Label htmlFor="cpf">CPF ou CNPJ (opcional)</Label>
+                            <Label htmlFor="cpf">CPF ou CNPJ</Label>
                             <Input
                                 id="cpf"
                                 placeholder="123.456.789-00"
@@ -130,6 +157,19 @@ export function CustomerDialog({ open, onOpenChange, customer, onSaved, }: Custo
                                 onChange={(e) => setFormData({ ...formData, cpf_cnpj: e.target.value })}
                             />
                         </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="nascimento">Data de nascimento</Label>
+                        <Input
+                            id="nascimento"
+                            type="date"
+                            value={formData.nascimento}
+                            onChange={(e) => setFormData({ ...formData, nascimento: e.target.value })}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                            Campo opcional. Use para campanhas de aniversário e relacionamento com o cliente.
+                        </p>
                     </div>
 
                     <DialogFooter>
@@ -140,6 +180,7 @@ export function CustomerDialog({ open, onOpenChange, customer, onSaved, }: Custo
                         >
                             Cancelar
                         </Button>
+
                         <Button type="submit" disabled={loading}>
                             {loading ? 'Salvando...' : 'Salvar'}
                         </Button>
