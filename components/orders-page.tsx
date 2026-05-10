@@ -20,7 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@prodexy/ui'
-import { Search, Wrench, Car, Plus, Pencil, Trash2, Camera, FileText, Printer, MoreHorizontal, Eye } from 'lucide-react'
+import { Search, Wrench, Car, Plus, Pencil, Trash2, Camera, FileText, Printer, Filter, MoreHorizontal, Eye } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
 import { OrderDetailsDialog, type OrdemServicoDetails } from '@/components/order-details-dialog'
 import { OrderDialog, type OrdemServicoEdit } from '@/components/order-dialog'
@@ -62,6 +62,8 @@ type OrdemServicoItemRow = {
 type Servico = {
   id: string
   nome: string
+  is_periodico?: boolean | null
+  periodicidade_meses?: number | null
 }
 
 type OrdemFoto = {
@@ -126,7 +128,7 @@ export function OrdersPage({
       supabase.from('clientes').select('id,nome,telefone,cpf_cnpj'),
       supabase.from('veiculos').select('id,cliente_id,placa,marca,modelo,ano,cor,tem_seguro'),
       supabase.from('ordem_servicos').select('id,os_id,servico_id,valor'),
-      supabase.from('servicos').select('id,nome'),
+      supabase.from('servicos').select('id,nome,is_periodico,periodicidade_meses'),
       supabase.from('ordem_fotos').select('id,os_id,foto_url,criado_em').order('criado_em', { ascending: true }),
       supabase.from('ordem_diagnosticos').select('id,os_id,descricao,criado_em').order('criado_em', { ascending: true }),
     ])
@@ -236,6 +238,8 @@ export function OrdersPage({
     const itens = (serviceRowsByOrder[order.id] || []).map((item) => ({
       id: item.id,
       nome: services[item.servico_id]?.nome || 'Serviço não identificado',
+      is_periodico: services[item.servico_id]?.is_periodico,
+      periodicidade_meses: services[item.servico_id]?.periodicidade_meses,
       valor: Number(item.valor || 0),
     }))
 
@@ -269,6 +273,8 @@ export function OrdersPage({
       id: item.id,
       servico_id: item.servico_id,
       nome: services[item.servico_id]?.nome || 'Serviço não identificado',
+      is_periodico: services[item.servico_id]?.is_periodico,
+      periodicidade_meses: services[item.servico_id]?.periodicidade_meses,
       valor: Number(item.valor || 0),
     }))
 
@@ -360,28 +366,32 @@ export function OrdersPage({
 
       <Card>
         <CardHeader>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <div className="relative flex-1">
+          <div className="space-y-3">
+            <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={searchTerm}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
                 className="pl-9"
-                placeholder="Buscar por número, CPF, cliente, placa, marca ou modelo"
+                placeholder="Buscar por número, CPF, cliente, placa, marca ou modelo..."
               />
             </div>
-            <Select value={statusFilter} onValueChange={(value: string) => setStatusFilter(value as any)}>
-              <SelectTrigger className="w-full sm:w-[220px]">
-                <SelectValue placeholder="Filtrar status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos</SelectItem>
-                <SelectItem value="aberta">Abertas</SelectItem>
-                <SelectItem value="em_andamento">Em andamento</SelectItem>
-                <SelectItem value="finalizada">Finalizadas</SelectItem>
-                <SelectItem value="cancelada">Canceladas</SelectItem>
-              </SelectContent>
-            </Select>
+
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Select value={statusFilter} onValueChange={(value: string) => setStatusFilter(value as any)}>
+                <SelectTrigger className="w-full sm:w-[220px]">
+                  <Filter className="mr-2 h-4 w-4" />
+                  <SelectValue placeholder="Filtrar por status..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos os status</SelectItem>
+                  <SelectItem value="aberta">Abertas</SelectItem>
+                  <SelectItem value="em_andamento">Em andamento</SelectItem>
+                  <SelectItem value="finalizada">Finalizadas</SelectItem>
+                  <SelectItem value="cancelada">Canceladas</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardHeader>
 
@@ -426,7 +436,7 @@ export function OrdersPage({
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" size="sm" className="gap-2">
                           <MoreHorizontal className="h-4 w-4" />
-                          
+
                         </Button>
                       </DropdownMenuTrigger>
 

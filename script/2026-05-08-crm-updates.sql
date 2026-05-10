@@ -113,3 +113,67 @@ begin
       with check (true);
   end if;
 end $$;
+
+
+alter table public.servicos
+  add column if not exists is_periodico boolean not null default false;
+
+alter table public.servicos
+  add column if not exists periodicidade_meses integer null;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'servicos_periodicidade_meses_check'
+  ) then
+    alter table public.servicos
+      add constraint servicos_periodicidade_meses_check
+      check (
+        (is_periodico = false and periodicidade_meses is null)
+        or
+        (is_periodico = true and periodicidade_meses is not null and periodicidade_meses > 0)
+      );
+  end if;
+end $$;
+
+alter table public.manutencoes_veiculo
+  add column if not exists servico_id uuid null;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'manutencoes_veiculo_servico_id_fkey'
+  ) then
+    alter table public.manutencoes_veiculo
+      add constraint manutencoes_veiculo_servico_id_fkey
+      foreign key (servico_id)
+      references public.servicos(id)
+      on delete set null;
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'manutencoes_veiculo_veiculo_id_servico_id_key'
+  ) then
+    alter table public.manutencoes_veiculo
+      add constraint manutencoes_veiculo_veiculo_id_servico_id_key
+      unique (veiculo_id, servico_id);
+  end if;
+end $$;
+
+create index if not exists idx_servicos_periodicos
+  on public.servicos using btree (is_periodico, periodicidade_meses);
+
+create index if not exists idx_manutencoes_veiculo_servico
+  on public.manutencoes_veiculo using btree (servico_id);
+
+create index if not exists idx_manutencoes_veiculo_servico_data_status
+  on public.manutencoes_veiculo using btree (servico_id, proxima_data, status);

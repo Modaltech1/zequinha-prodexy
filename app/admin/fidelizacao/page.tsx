@@ -22,7 +22,7 @@ import {
   SelectValue,
   Textarea,
 } from '@prodexy/ui'
-import { CalendarClock, Car, ChevronLeft, ChevronRight, Pencil, Plus, Save, Search, Wrench } from 'lucide-react'
+import { CalendarClock, Car, ChevronLeft, ChevronRight, Filter, Pencil, Plus, Save, Search, Wrench } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
 
 type ClienteRow = {
@@ -45,6 +45,13 @@ type VeiculoRow = {
   tem_seguro?: boolean | null
 }
 
+type ServicoRow = {
+  id: string
+  nome: string
+  is_periodico?: boolean | null
+  periodicidade_meses?: number | null
+}
+
 type OrdemRow = {
   id: string
   numero: string | null
@@ -60,6 +67,7 @@ type OrdemRow = {
 type ManutencaoRow = {
   id: string
   veiculo_id: string
+  servico_id?: string | null
   tipo: string
   descricao: string | null
   periodicidade_meses: number | null
@@ -72,7 +80,7 @@ type ManutencaoRow = {
 }
 
 type MaintenanceForm = {
-  tipo: string
+  servico_id?: string | null
   descricao: string
   proxima_data: string
 }
@@ -88,8 +96,17 @@ type VehicleDetailsForm = {
   tem_seguro: string
 }
 
+type PeriodFilter = 'all' | 'overdue' | 'current-month' | 'next-month' | 'next-3-months' | 'next-6-months'
+
+type MaintenanceListItem = {
+  maintenance: ManutencaoRow
+  vehicle: VeiculoRow
+  customer?: ClienteRow
+  service?: ServicoRow
+}
+
 const defaultMaintenanceForm: MaintenanceForm = {
-  tipo: 'revisao',
+  servico_id: '',
   descricao: '',
   proxima_data: '',
 }
@@ -112,13 +129,58 @@ function formatVehicleLabel(vehicle: VeiculoRow) {
   return `${label}${vehicle.placa ? ` • ${vehicle.placa}` : ''}`
 }
 
+function getMonthRange(offset: number) {
+  const now = new Date()
+  const start = new Date(now.getFullYear(), now.getMonth() + offset, 1)
+  const end = new Date(now.getFullYear(), now.getMonth() + offset + 1, 0)
+  start.setHours(0, 0, 0, 0)
+  end.setHours(23, 59, 59, 999)
+  return { start, end }
+}
+
+function isWithinPeriod(dateValue: string | null, filter: PeriodFilter) {
+  if (!dateValue) return false
+
+  const date = new Date(`${dateValue}T00:00:00`)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  if (filter === 'all') return true
+  if (filter === 'overdue') return date < today
+
+  if (filter === 'current-month') {
+    const { start, end } = getMonthRange(0)
+    return date >= start && date <= end
+  }
+
+  if (filter === 'next-month') {
+    const { start, end } = getMonthRange(1)
+    return date >= start && date <= end
+  }
+
+  if (filter === 'next-3-months') {
+    const end = new Date(today)
+    end.setMonth(end.getMonth() + 3)
+    return date >= today && date <= end
+  }
+
+  if (filter === 'next-6-months') {
+    const end = new Date(today)
+    end.setMonth(end.getMonth() + 6)
+    return date >= today && date <= end
+  }
+
+  return true
+}
+
 function getMaintenanceStatus(item?: ManutencaoRow) {
   if (!item?.proxima_data) return { label: 'Sem programação', variant: 'secondary' as const }
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const next = new Date(`${item.proxima_data}T00:00:00`)
   if (next < today) return { label: 'Atrasada', variant: 'destructive' as const }
-  if (next.getMonth() === today.getMonth() && next.getFullYear() === today.getFullYear()) return { label: 'Este mês', variant: 'default' as const }
+  const currentMonth = getMonthRange(0)
+  if (next >= currentMonth.start && next <= currentMonth.end) return { label: 'Este mês', variant: 'default' as const }
   return { label: 'Programada', variant: 'secondary' as const }
 }
 
@@ -129,8 +191,9 @@ export default function Page() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
-  const [filterType, setFilterType] = useState<'all' | 'due-month' | 'overdue' | 'without-schedule'>('all')
-  const [sortBy, setSortBy] = useState<'cliente' | 'placa' | 'proxima'>('cliente')
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('current-month')
+  const [serviceFilter, setServiceFilter] = useState('all')
+  const [servicos, setServicos] = useState<ServicoRow[]>([])
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
 
@@ -148,15 +211,16 @@ export default function Page() {
     setLoading(true)
     setError(null)
 
-    const [clientesRes, veiculosRes, ordensRes, manutencoesRes] = await Promise.all([
+    const [clientesRes, veiculosRes, ordensRes, servicosRes, manutencoesRes] = await Promise.all([
       supabase.from('clientes').select('id,nome,telefone,email'),
       supabase.from('veiculos').select('id,cliente_id,placa,marca,modelo,ano,cor,km_atual,observacoes,tem_seguro').order('criado_em', { ascending: false }),
       supabase.from('ordens_de_servico').select('id,numero,cliente_id,veiculo_id,status,valor_final,valor_total,criado_em,observacoes').order('criado_em', { ascending: false }),
-      supabase.from('manutencoes_veiculo').select('id,veiculo_id,tipo,descricao,periodicidade_meses,periodicidade_km,ultima_data,ultima_km,proxima_data,proxima_km,status').order('proxima_data', { ascending: true }),
+      supabase.from('servicos').select('id,nome,is_periodico,periodicidade_meses').order('nome', { ascending: true }),
+      supabase.from('manutencoes_veiculo').select('id,veiculo_id,servico_id,tipo,descricao,periodicidade_meses,periodicidade_km,ultima_data,ultima_km,proxima_data,proxima_km,status').order('proxima_data', { ascending: true }),
     ])
 
-    if (clientesRes.error || veiculosRes.error || ordensRes.error || manutencoesRes.error) {
-      console.error(clientesRes.error || veiculosRes.error || ordensRes.error || manutencoesRes.error)
+    if (clientesRes.error || veiculosRes.error || ordensRes.error || servicosRes.error || manutencoesRes.error) {
+      console.error(clientesRes.error || veiculosRes.error || ordensRes.error || servicosRes.error || manutencoesRes.error)
       setError('Erro ao carregar dados de fidelização.')
       setLoading(false)
       return
@@ -169,6 +233,7 @@ export default function Page() {
     }, {}))
     setVeiculos((veiculosRes.data || []) as VeiculoRow[])
     setOrdens((ordensRes.data || []) as OrdemRow[])
+    setServicos((servicosRes.data || []) as ServicoRow[])
     setManutencoes((manutencoesRes.data || []) as ManutencaoRow[])
     setLoading(false)
   }
@@ -176,16 +241,6 @@ export default function Page() {
   useEffect(() => {
     loadData()
   }, [])
-
-  const nextPendingByVehicleId = useMemo(() => {
-    const map: Record<string, ManutencaoRow | undefined> = {}
-    for (const item of manutencoes) {
-      if (item.status !== 'pendente' || !item.proxima_data) continue
-      const current = map[item.veiculo_id]
-      if (!current || String(item.proxima_data) < String(current.proxima_data)) map[item.veiculo_id] = item
-    }
-    return map
-  }, [manutencoes])
 
   const historyCountByVehicleId = useMemo(() => {
     const map: Record<string, number> = {}
@@ -196,78 +251,83 @@ export default function Page() {
     return map
   }, [ordens])
 
-  const filteredVehicles = useMemo(() => {
+  const servicesById = useMemo(() => {
+    return servicos.reduce<Record<string, ServicoRow>>((acc, item) => {
+      acc[item.id] = item
+      return acc
+    }, {})
+  }, [servicos])
+
+  const periodicServices = useMemo(() => {
+    return servicos.filter((servico) => servico.is_periodico)
+  }, [servicos])
+
+  const vehiclesById = useMemo(() => {
+    return veiculos.reduce<Record<string, VeiculoRow>>((acc, item) => {
+      acc[item.id] = item
+      return acc
+    }, {})
+  }, [veiculos])
+
+  const maintenanceList = useMemo(() => {
     const term = searchTerm.trim().toLowerCase()
-    const now = new Date()
-    const todayStart = new Date()
-    todayStart.setHours(0, 0, 0, 0)
-    const month = now.getMonth()
-    const year = now.getFullYear()
-    let list = [...veiculos]
 
-    if (term) {
-      list = list.filter((vehicle) => {
-        const cliente = clientesById[vehicle.cliente_id]
-        return [vehicle.placa || '', vehicle.marca || '', vehicle.modelo || '', cliente?.nome || '', cliente?.telefone || '']
-          .join(' ')
-          .toLowerCase()
-          .includes(term)
+    return manutencoes
+      .filter((maintenance) => maintenance.status === 'pendente' && maintenance.proxima_data)
+      .map((maintenance) => {
+        const vehicle = vehiclesById[maintenance.veiculo_id]
+        if (!vehicle) return null
+
+        return {
+          maintenance,
+          vehicle,
+          customer: clientesById[vehicle.cliente_id],
+          service: maintenance.servico_id ? servicesById[maintenance.servico_id] : undefined,
+        }
       })
-    }
+      .filter((item): item is MaintenanceListItem => Boolean(item))
+      .filter((item) => {
+        if (serviceFilter !== 'all' && item.maintenance.servico_id !== serviceFilter) return false
+        if (!isWithinPeriod(item.maintenance.proxima_data, periodFilter)) return false
+        if (!term) return true
 
-    if (filterType === 'due-month') {
-      list = list.filter((vehicle) => {
-        const next = nextPendingByVehicleId[vehicle.id]
-        if (!next?.proxima_data) return false
-        const d = new Date(`${next.proxima_data}T00:00:00`)
-        return d.getMonth() === month && d.getFullYear() === year
+        const searchable = [
+          item.vehicle.placa || '',
+          item.vehicle.marca || '',
+          item.vehicle.modelo || '',
+          item.customer?.nome || '',
+          item.customer?.telefone || '',
+          item.service?.nome || item.maintenance.tipo || '',
+        ].join(' ').toLowerCase()
+
+        return searchable.includes(term)
       })
-    } else if (filterType === 'overdue') {
-      list = list.filter((vehicle) => {
-        const next = nextPendingByVehicleId[vehicle.id]
-        if (!next?.proxima_data) return false
-        return new Date(`${next.proxima_data}T00:00:00`) < todayStart
-      })
-    } else if (filterType === 'without-schedule') {
-      list = list.filter((vehicle) => !nextPendingByVehicleId[vehicle.id]?.proxima_data)
-    }
-
-    list.sort((a, b) => {
-      const customerA = clientesById[a.cliente_id]?.nome || ''
-      const customerB = clientesById[b.cliente_id]?.nome || ''
-      const nextA = nextPendingByVehicleId[a.id]?.proxima_data || '9999-12-31'
-      const nextB = nextPendingByVehicleId[b.id]?.proxima_data || '9999-12-31'
-      if (sortBy === 'placa') return (a.placa || '').localeCompare(b.placa || '')
-      if (sortBy === 'proxima') return nextA.localeCompare(nextB)
-      return customerA.localeCompare(customerB)
-    })
-
-    return list
-  }, [veiculos, clientesById, searchTerm, filterType, sortBy, nextPendingByVehicleId])
+      .sort((a, b) => String(a.maintenance.proxima_data || '9999-12-31').localeCompare(String(b.maintenance.proxima_data || '9999-12-31')))
+  }, [manutencoes, vehiclesById, clientesById, servicesById, serviceFilter, periodFilter, searchTerm])
 
   const dueThisMonth = useMemo(() => {
-    const now = new Date()
-    return Object.values(nextPendingByVehicleId).filter((item): item is ManutencaoRow => {
-      if (!item?.proxima_data) return false
-      const d = new Date(`${item.proxima_data}T00:00:00`)
-      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
-    })
-  }, [nextPendingByVehicleId])
+    return manutencoes.filter((item) => item.status === 'pendente' && isWithinPeriod(item.proxima_data, 'current-month'))
+  }, [manutencoes])
 
   const overdueCount = useMemo(() => {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    return Object.values(nextPendingByVehicleId).filter((item) => item?.proxima_data && new Date(`${item.proxima_data}T00:00:00`) < today).length
-  }, [nextPendingByVehicleId])
+    return manutencoes.filter((item) => item.status === 'pendente' && isWithinPeriod(item.proxima_data, 'overdue')).length
+  }, [manutencoes])
 
-  const totalPages = Math.ceil(filteredVehicles.length / itemsPerPage) || 1
+  const pendingMaintenances = manutencoes.filter((item) => item.status === 'pendente' && item.proxima_data)
+  const monitoredVehicles = new Set(pendingMaintenances.map((item) => item.veiculo_id)).size
+
+  const totalPages = Math.ceil(maintenanceList.length / itemsPerPage) || 1
   const startIndex = (currentPage - 1) * itemsPerPage
   const endIndex = startIndex + itemsPerPage
-  const paginatedVehicles = filteredVehicles.slice(startIndex, endIndex)
+  const paginatedItems = maintenanceList.slice(startIndex, endIndex)
   const selectedVehicle = veiculos.find((vehicle) => vehicle.id === selectedVehicleId) || null
   const selectedCustomer = selectedVehicle ? clientesById[selectedVehicle.cliente_id] : null
   const selectedVehicleOrders = selectedVehicle ? ordens.filter((order) => order.veiculo_id === selectedVehicle.id) : []
-  const selectedMaintenances = selectedVehicle ? manutencoes.filter((item) => item.veiculo_id === selectedVehicle.id) : []
+  const selectedMaintenances = selectedVehicle
+    ? manutencoes
+      .filter((item) => item.veiculo_id === selectedVehicle.id)
+      .sort((a, b) => String(a.proxima_data || '9999-12-31').localeCompare(String(b.proxima_data || '9999-12-31')))
+    : []
 
   function openDetails(vehicle: VeiculoRow) {
     setSelectedVehicleId(vehicle.id)
@@ -281,7 +341,10 @@ export default function Page() {
       observacoes: vehicle.observacoes || '',
       tem_seguro: vehicle.tem_seguro ? 'sim' : 'nao',
     })
-    setMaintenanceForm(defaultMaintenanceForm)
+    setMaintenanceForm({
+      ...defaultMaintenanceForm,
+      servico_id: periodicServices[0]?.id || '',
+    })
     setDetailsOpen(true)
     setSuccess(null)
     setError(null)
@@ -326,20 +389,30 @@ export default function Page() {
     setSuccess(null)
 
     try {
+      if (!maintenanceForm.servico_id) throw new Error('Selecione um serviço periódico.')
       if (!maintenanceForm.proxima_data) throw new Error('Informe a data da próxima manutenção.')
-      const { error } = await supabase.from('manutencoes_veiculo').insert({
+
+      const service = servicesById[maintenanceForm.servico_id]
+      if (!service?.is_periodico) throw new Error('O serviço selecionado não está marcado como periódico.')
+
+      const { error } = await supabase.from('manutencoes_veiculo').upsert({
         veiculo_id: selectedVehicle.id,
-        tipo: maintenanceForm.tipo,
+        servico_id: service.id,
+        tipo: service.nome,
         descricao: maintenanceForm.descricao.trim() || null,
+        periodicidade_meses: service.periodicidade_meses || null,
         proxima_data: maintenanceForm.proxima_data,
         status: 'pendente',
-      })
+        atualizado_em: new Date().toISOString(),
+      }, { onConflict: 'veiculo_id,servico_id' })
+
       if (error) throw error
-      setMaintenanceForm(defaultMaintenanceForm)
+
+      setMaintenanceForm({ ...defaultMaintenanceForm, servico_id: periodicServices[0]?.id || '' })
       setSuccess('Próxima manutenção registrada.')
       await loadData()
     } catch (err: any) {
-      console.error(err)
+      console.error('Erro ao registrar manutenção:', err)
       setError(err?.message || 'Erro ao registrar manutenção.')
     } finally {
       setSavingMaintenance(false)
@@ -366,8 +439,8 @@ export default function Page() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
-        <SummaryCard title="Veículos" value={String(veiculos.length)} icon={Car} />
-        <SummaryCard title="Com programação" value={String(Object.keys(nextPendingByVehicleId).length)} icon={CalendarClock} />
+        <SummaryCard title="Veículos monitorados" value={String(monitoredVehicles)} icon={Car} />
+        <SummaryCard title="Manutenções pendentes" value={String(pendingMaintenances.length)} icon={CalendarClock} />
         <SummaryCard title="Vencidas" value={String(overdueCount)} icon={Wrench} />
         <SummaryCard title="Este mês" value={String(dueThisMonth.length)} icon={CalendarClock} />
       </div>
@@ -377,56 +450,78 @@ export default function Page() {
 
       <Card>
         <CardHeader>
-          <div className="flex flex-col gap-3 lg:flex-row">
-            <div className="relative flex-1">
+          <div className="space-y-3">
+            <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input value={searchTerm} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)} className="pl-9" placeholder="Buscar por cliente, telefone, placa, marca ou modelo" />
+              <Input
+                value={searchTerm}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                  setSearchTerm(e.target.value)
+                  setCurrentPage(1)
+                }}
+                className="pl-9"
+                placeholder="Buscar por cliente, telefone, placa, marca, modelo ou serviço..."
+              />
             </div>
-            <Select value={filterType} onValueChange={(value: string) => { setFilterType(value as any); setCurrentPage(1) }}>
-              <SelectTrigger className="w-full lg:w-[220px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="due-month">Próximas este mês</SelectItem>
-                <SelectItem value="overdue">Atrasadas</SelectItem>
-                <SelectItem value="without-schedule">Sem programação</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={sortBy} onValueChange={(value: string) => setSortBy(value as any)}>
-              <SelectTrigger className="w-full lg:w-[190px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="cliente">Cliente</SelectItem>
-                <SelectItem value="placa">Placa</SelectItem>
-                <SelectItem value="proxima">Próxima data</SelectItem>
-              </SelectContent>
-            </Select>
+
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Select value={periodFilter} onValueChange={(value: string) => { setPeriodFilter(value as PeriodFilter); setCurrentPage(1) }}>
+                <SelectTrigger className="w-full sm:w-[230px]">
+                  <Filter className="mr-2 h-4 w-4" />
+                  <SelectValue placeholder="Filtrar período..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="current-month">Manutenções deste mês</SelectItem>
+                  <SelectItem value="next-month">Manutenções do próximo mês</SelectItem>
+                  <SelectItem value="next-3-months">Próximos 3 meses</SelectItem>
+                  <SelectItem value="next-6-months">Próximos 6 meses</SelectItem>
+                  <SelectItem value="overdue">Manutenções vencidas</SelectItem>
+                  <SelectItem value="all">Todas as manutenções</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={serviceFilter} onValueChange={(value: string) => { setServiceFilter(value); setCurrentPage(1) }}>
+                <SelectTrigger className="w-full sm:w-[260px]">
+                  <Wrench className="mr-2 h-4 w-4" />
+                  <SelectValue placeholder="Filtrar serviço periódico..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os serviços periódicos</SelectItem>
+                  {periodicServices.map((servico) => (
+                    <SelectItem key={servico.id} value={servico.id}>
+                      {servico.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardHeader>
 
         <CardContent className="space-y-3">
           {loading && <p className="text-sm text-muted-foreground">Carregando fidelização...</p>}
-          {!loading && paginatedVehicles.length === 0 && <p className="text-sm text-muted-foreground">Nenhum veículo encontrado com os filtros atuais.</p>}
+          {!loading && paginatedItems.length === 0 && (
+            <p className="text-sm text-muted-foreground">
+              Nenhuma manutenção periódica encontrada com os filtros atuais.
+            </p>
+          )}
 
-          {paginatedVehicles.map((vehicle) => {
-            const customer = clientesById[vehicle.cliente_id]
-            const next = nextPendingByVehicleId[vehicle.id]
-            const status = getMaintenanceStatus(next)
+          {paginatedItems.map(({ maintenance, vehicle, customer, service }) => {
+            const status = getMaintenanceStatus(maintenance)
             return (
-              <div key={vehicle.id} className="flex flex-col gap-4 rounded-xl border p-4 lg:flex-row lg:items-center lg:justify-between">
+              <div key={maintenance.id} className="flex flex-col gap-4 rounded-xl border p-4 lg:flex-row lg:items-center lg:justify-between">
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-semibold">{formatVehicleLabel(vehicle)}</p>
                     <Badge variant={status.variant}>{status.label}</Badge>
                     {vehicle.tem_seguro && <Badge variant="secondary">Com seguro</Badge>}
                   </div>
-                  <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-2 xl:grid-cols-4">
+                  <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-2 xl:grid-cols-5">
                     <p><span className="font-medium text-foreground">Cliente:</span> {customer?.nome || 'Cliente não identificado'}</p>
                     <p><span className="font-medium text-foreground">Telefone:</span> {customer?.telefone || '-'}</p>
+                    <p><span className="font-medium text-foreground">Serviço:</span> {service?.nome || maintenance.tipo}</p>
+                    <p><span className="font-medium text-foreground">Próxima:</span> {maintenance.proxima_data ? new Date(`${maintenance.proxima_data}T00:00:00`).toLocaleDateString('pt-BR') : '-'}</p>
                     <p><span className="font-medium text-foreground">Histórico:</span> {historyCountByVehicleId[vehicle.id] || 0} OS</p>
-                    <p><span className="font-medium text-foreground">Próxima:</span> {next?.proxima_data ? new Date(`${next.proxima_data}T00:00:00`).toLocaleDateString('pt-BR') : '-'}</p>
                   </div>
                 </div>
                 <Button variant="outline" className="gap-2" onClick={() => openDetails(vehicle)}>
@@ -439,7 +534,7 @@ export default function Page() {
 
           {totalPages > 1 && (
             <div className="flex items-center justify-between border-t pt-4">
-              <p className="text-sm text-muted-foreground">Mostrando {startIndex + 1} a {Math.min(endIndex, filteredVehicles.length)} de {filteredVehicles.length} veículos</p>
+              <p className="text-sm text-muted-foreground">Mostrando {startIndex + 1} a {Math.min(endIndex, maintenanceList.length)} de {maintenanceList.length} manutenções</p>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))} disabled={currentPage === 1}>
                   <ChevronLeft className="h-4 w-4" />
@@ -509,15 +604,15 @@ export default function Page() {
                   <CardContent>
                     <form onSubmit={handleCreateMaintenance} className="space-y-3">
                       <div className="space-y-2">
-                        <Label>Tipo</Label>
-                        <Select value={maintenanceForm.tipo} onValueChange={(value: string) => setMaintenanceForm((prev) => ({ ...prev, tipo: value }))}>
-                          <SelectTrigger><SelectValue /></SelectTrigger>
+                        <Label>Serviço periódico</Label>
+                        <Select value={maintenanceForm.servico_id} onValueChange={(value: string) => setMaintenanceForm((prev) => ({ ...prev, servico_id: value }))}>
+                          <SelectTrigger><SelectValue placeholder="Selecione um serviço periódico" /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="revisao">Revisão</SelectItem>
-                            <SelectItem value="alinhamento">Alinhamento</SelectItem>
-                            <SelectItem value="balanceamento">Balanceamento</SelectItem>
-                            <SelectItem value="troca_oleo">Troca de óleo</SelectItem>
-                            <SelectItem value="freios">Freios</SelectItem>
+                            {periodicServices.map((servico) => (
+                              <SelectItem key={servico.id} value={servico.id}>
+                                {servico.nome} • {servico.periodicidade_meses || 0} mês(es)
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
@@ -529,10 +624,16 @@ export default function Page() {
                         <Label>Descrição</Label>
                         <Textarea value={maintenanceForm.descricao} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setMaintenanceForm((prev) => ({ ...prev, descricao: e.target.value }))} />
                       </div>
-                      <Button type="submit" disabled={savingMaintenance} className="gap-2">
+                      <Button type="submit" disabled={savingMaintenance || periodicServices.length === 0} className="gap-2">
                         <Plus className="h-4 w-4" />
                         {savingMaintenance ? 'Salvando...' : 'Salvar próxima manutenção'}
                       </Button>
+
+                      {periodicServices.length === 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          Cadastre pelo menos um serviço periódico na página de Serviços.
+                        </p>
+                      )}
                     </form>
                   </CardContent>
                 </Card>
@@ -558,7 +659,7 @@ export default function Page() {
                       {selectedMaintenances.filter((item) => item.status === 'pendente').slice(0, 6).map((item) => (
                         <div key={item.id} className="flex items-start justify-between gap-3 rounded-lg border p-2 text-xs">
                           <div>
-                            <p className="font-medium">{item.tipo}</p>
+                            <p className="font-medium">{item.servico_id ? servicesById[item.servico_id]?.nome || item.tipo : item.tipo}</p>
                             <p className="text-muted-foreground">{item.proxima_data ? new Date(`${item.proxima_data}T00:00:00`).toLocaleDateString('pt-BR') : '-'}</p>
                             {item.descricao && <p className="text-muted-foreground">{item.descricao}</p>}
                           </div>

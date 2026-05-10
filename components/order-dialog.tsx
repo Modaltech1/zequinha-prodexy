@@ -33,6 +33,8 @@ export type ClienteOption = {
 export type ServicoOption = {
   id: string
   nome: string
+  is_periodico?: boolean | null
+  periodicidade_meses?: number | null
 }
 
 export type OrdemServicoEdit = {
@@ -57,6 +59,8 @@ export type OrdemServicoEdit = {
     servico_id: string
     nome: string
     valor?: number
+    is_periodico?: boolean | null
+    periodicidade_meses?: number | null
   }[]
   diagnosticos: {
     id?: string
@@ -78,6 +82,8 @@ type Props = {
 type ServicoSelecionado = {
   servico_id: string
   nome: string
+  is_periodico?: boolean | null
+  periodicidade_meses?: number | null
 }
 
 type DiagnosticoSelecionado = {
@@ -104,6 +110,16 @@ function normalizeDigits(value: string) {
 function parseMoney(value: string) {
   const normalized = value.replace(/\./g, '').replace(',', '.')
   return Number(normalized) || 0
+}
+
+function formatDateInput(date: Date) {
+  return date.toISOString().slice(0, 10)
+}
+
+function addMonths(date: Date, months: number) {
+  const next = new Date(date)
+  next.setMonth(next.getMonth() + months)
+  return next
 }
 
 export function OrderDialog({ open, onOpenChange, order, onSaved }: Props) {
@@ -149,7 +165,7 @@ export function OrderDialog({ open, onOpenChange, order, onSaved }: Props) {
   async function loadBaseData() {
     const [clientesRes, servicosRes] = await Promise.all([
       supabase.from('clientes').select('id, nome, cpf_cnpj, telefone, email, nascimento').order('nome', { ascending: true }),
-      supabase.from('servicos').select('id, nome').order('nome', { ascending: true }),
+      supabase.from('servicos').select('id, nome, is_periodico, periodicidade_meses').order('nome', { ascending: true }),
     ])
 
     if (clientesRes.error) {
@@ -231,6 +247,8 @@ export function OrderDialog({ open, onOpenChange, order, onSaved }: Props) {
         (order.servicos || []).map((s) => ({
           servico_id: s.servico_id,
           nome: s.nome,
+          is_periodico: s.is_periodico,
+          periodicidade_meses: s.periodicidade_meses,
         }))
       )
       setDiagnosticos(order.diagnosticos || [])
@@ -307,7 +325,15 @@ export function OrderDialog({ open, onOpenChange, order, onSaved }: Props) {
       return
     }
 
-    setServicos((prev) => [...prev, { servico_id: selected.id, nome: selected.nome }])
+    setServicos((prev) => [
+      ...prev,
+      {
+        servico_id: selected.id,
+        nome: selected.nome,
+        is_periodico: selected.is_periodico,
+        periodicidade_meses: selected.periodicidade_meses,
+      },
+    ])
     setNovoServicoId('')
   }
 
@@ -515,6 +541,40 @@ export function OrderDialog({ open, onOpenChange, order, onSaved }: Props) {
           )
 
         if (insertServicosError) throw insertServicosError
+      }
+
+      if (finalVeiculoId && status !== 'cancelada') {
+        const today = new Date()
+
+        const periodicMaintenances = servicos
+          .map((servico) => {
+            const meta = servicosDisponiveis.find((item) => item.id === servico.servico_id) || servico
+            const months = Number(meta.periodicidade_meses || 0)
+
+            if (!meta.is_periodico || months < 1) return null
+
+            return {
+              veiculo_id: finalVeiculoId,
+              servico_id: servico.servico_id,
+              tipo: meta.nome,
+              descricao: `Manutenção periódica gerada pela OS ${numero.trim() || osId}`,
+              periodicidade_meses: months,
+              ultima_data: formatDateInput(today),
+              proxima_data: formatDateInput(addMonths(today, months)),
+              status: 'pendente',
+              ultima_os_id: osId,
+              atualizado_em: new Date().toISOString(),
+            }
+          })
+          .filter((item): item is NonNullable<typeof item> => Boolean(item))
+
+        if (periodicMaintenances.length > 0) {
+          const { error: manutencoesError } = await supabase
+            .from('manutencoes_veiculo')
+            .upsert(periodicMaintenances, { onConflict: 'veiculo_id,servico_id' })
+
+          if (manutencoesError) throw manutencoesError
+        }
       }
 
       const { error: deleteDiagnosticosError } = await supabase
