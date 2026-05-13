@@ -853,7 +853,7 @@ export function OrderForm({
       <form onSubmit={handleSubmit} className="space-y-6">
         {error && <p className="text-sm text-destructive">{error}</p>}
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 rounded-xl border p-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5 rounded-xl border p-4">
           <div className="space-y-2">
             <Label htmlFor="numero">Número da OS</Label>
             <Input id="numero" value={numero} placeholder="2026-001" onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNumero(e.target.value)} />
@@ -898,6 +898,16 @@ export function OrderForm({
               value={kmEntrada}
               placeholder="Ex.: 85620"
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setKmEntrada(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="valor-os">Valor da OS (opcional)</Label>
+            <Input
+              id="valor-os"
+              value={acrescimos}
+              placeholder="Ex.: 150,00"
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAcrescimos(e.target.value)}
             />
           </div>
         </div>
@@ -1149,16 +1159,10 @@ export function OrderForm({
         </div>
 
         <div className="space-y-3 rounded-xl border p-4">
-          <p className="text-sm font-semibold">Mão de obra e adicionais</p>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="mao-de-obra">Mão de obra</Label>
-              <Input id="mao-de-obra" value={maoDeObra} placeholder="Ex.: 80,00" onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMaoDeObra(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="acrescimos">Acréscimos</Label>
-              <Input id="acrescimos" value={acrescimos} placeholder="Ex.: 20,00" onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAcrescimos(e.target.value)} />
-            </div>
+          <p className="text-sm font-semibold">Mão de obra</p>
+          <div className="space-y-2">
+            <Label htmlFor="mao-de-obra">Mão de obra</Label>
+            <Input id="mao-de-obra" value={maoDeObra} placeholder="Ex.: 80,00" onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMaoDeObra(e.target.value)} />
           </div>
         </div>
 
@@ -1211,7 +1215,7 @@ export function OrderForm({
             <span className="font-semibold">R$ {maoDeObraValue.toFixed(2)}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Acréscimos</span>
+            <span className="text-muted-foreground">Valor da OS</span>
             <span className="font-semibold">R$ {acrescimosValue.toFixed(2)}</span>
           </div>
           <div className="flex items-center justify-between border-t pt-2">
