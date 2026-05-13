@@ -8,6 +8,8 @@ export type OrdemServicoItem = {
   id: string
   nome: string
   valor?: number
+  codigo_peca?: string | null
+  observacao?: string | null
 }
 
 export type OrdemDiagnosticoItem = {
@@ -67,6 +69,7 @@ export function OrderDetailsDialog({
               <p>Modelo: <span className="font-medium">{order.veiculo_modelo || 'Não informado'}</span></p>
               <p>Ano: <span className="font-medium">{order.veiculo_ano || 'Não informado'}</span></p>
               <p>Cor: <span className="font-medium">{order.veiculo_cor || 'Não informada'}</span></p>
+              <p>KM entrada: <span className="font-medium">{order.km_entrada ?? '-'}</span></p>
               <p>Tem seguro?: <span className="font-medium">{order.veiculo_tem_seguro ? 'Sim' : 'Não'}</span></p>
             </div>
           </Section>
@@ -76,6 +79,9 @@ export function OrderDetailsDialog({
               {order.servicos.map((item) => (
                 <div key={item.id} className="rounded-lg border p-3">
                   <p className="font-medium">{item.nome}</p>
+                  <p className="text-sm text-muted-foreground">Valor: R$ {Number(item.valor || 0).toFixed(2)}</p>
+                  {item.codigo_peca && <p className="text-sm text-muted-foreground">Código peça: {item.codigo_peca}</p>}
+                  {item.observacao && <p className="text-sm text-muted-foreground">Obs: {item.observacao}</p>}
                 </div>
               ))}
               {order.servicos.length === 0 && <p className="text-sm text-muted-foreground">Nenhum serviço adicionado.</p>}
@@ -97,6 +103,9 @@ export function OrderDetailsDialog({
             <div className="grid gap-2 text-sm sm:grid-cols-2">
               <p>Valor total: <span className="font-medium">R$ {Number(order.valor_total || 0).toFixed(2)}</span></p>
               <p>Valor final: <span className="font-medium">R$ {Number(order.valor_final || 0).toFixed(2)}</span></p>
+              <p>Mão de obra: <span className="font-medium">R$ {Number(order.mao_de_obra || 0).toFixed(2)}</span></p>
+              <p>Acréscimos: <span className="font-medium">R$ {Number(order.acrescimos || 0).toFixed(2)}</span></p>
+              <p>Responsável: <span className="font-medium">{order.responsavel_nome || '-'}</span></p>
               <p>Criado em: <span className="font-medium">{new Date(order.criado_em).toLocaleString('pt-BR')}</span></p>
               <p>Atualizado em: <span className="font-medium">{order.atualizado_em ? new Date(order.atualizado_em).toLocaleString('pt-BR') : '-'}</span></p>
             </div>

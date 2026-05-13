@@ -3,6 +3,8 @@
 # arquivos
 *.zip
 /script
+*.sql
+
 # dependencies
 /node_modules
 

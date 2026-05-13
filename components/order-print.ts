@@ -15,8 +15,12 @@ export type PrintableOrder = {
   veiculo_modelo: string | null
   veiculo_ano: string | null
   veiculo_cor: string | null
+  km_entrada?: number | null
   veiculo_tem_seguro?: boolean | null
-  servicos: { id: string; nome: string; valor?: number }[]
+  responsavel_nome?: string | null
+  mao_de_obra?: number | null
+  acrescimos?: number | null
+  servicos: { id: string; nome: string; valor?: number; codigo_peca?: string | null; observacao?: string | null }[]
   diagnosticos: { id: string; descricao: string }[]
 }
 
@@ -41,20 +45,28 @@ function formatDate(value: string | null | undefined) {
   return new Date(value).toLocaleString('pt-BR')
 }
 
-function getWorkshopData() {
+function getWorkshopData(order: PrintableOrder) {
   return {
     nome: process.env.NEXT_PUBLIC_OFICINA_NOME || 'Zequinha Pneus',
     cnpj: process.env.NEXT_PUBLIC_OFICINA_CNPJ || 'CNPJ não configurado',
     endereco: process.env.NEXT_PUBLIC_OFICINA_ENDERECO || 'Endereço não configurado',
-    telefone: process.env.NEXT_PUBLIC_OFICINA_TELEFONE || 'Telefone não configurado',
+    telefone: process.env.NEXT_PUBLIC_OFICINA_TELEFONE || order.cliente_telefone || 'Telefone não configurado',
   }
 }
 
 export function buildOrderPrintHtml(order: PrintableOrder) {
-  const oficina = getWorkshopData()
+  const oficina = getWorkshopData(order)
   const vehicle = [order.veiculo_marca, order.veiculo_modelo, order.veiculo_ano].filter(Boolean).join(' ')
   const servicesHtml = order.servicos.length
-    ? order.servicos.map((item) => `<li>${escapeHtml(item.nome)}</li>`).join('')
+    ? order.servicos.map((item) => {
+      const parts = [
+        `<strong>${escapeHtml(item.nome)}</strong>`,
+        item.codigo_peca ? `Código peça: ${escapeHtml(item.codigo_peca)}` : '',
+        item.observacao ? `Obs: ${escapeHtml(item.observacao)}` : '',
+        typeof item.valor === 'number' && item.valor > 0 ? `Valor: ${escapeHtml(formatMoney(item.valor))}` : '',
+      ].filter(Boolean)
+      return `<li>${parts.join(' • ')}</li>`
+    }).join('')
     : '<li>Nenhum serviço registrado.</li>'
   const diagnosticsHtml = order.diagnosticos.length
     ? order.diagnosticos.map((item) => `<li>${escapeHtml(item.descricao)}</li>`).join('')
@@ -102,6 +114,7 @@ export function buildOrderPrintHtml(order: PrintableOrder) {
         <h2>Ordem de Serviço</h2>
         <div><strong>Nº:</strong> ${escapeHtml(order.numero)}</div>
         <div><strong>Status:</strong> ${escapeHtml(order.status)}</div>
+        <div><strong>Responsável:</strong> ${escapeHtml(order.responsavel_nome || '-')}</div>
         <div><strong>Emitida em:</strong> ${escapeHtml(formatDate(order.atualizado_em || order.criado_em))}</div>
       </div>
     </div>
@@ -121,6 +134,7 @@ export function buildOrderPrintHtml(order: PrintableOrder) {
         <div><span class="label">Veículo</span><span class="value">${escapeHtml(vehicle || '-')}</span></div>
         <div><span class="label">Placa</span><span class="value">${escapeHtml(order.veiculo_placa || '-')}</span></div>
         <div><span class="label">Cor</span><span class="value">${escapeHtml(order.veiculo_cor || '-')}</span></div>
+        <div><span class="label">KM entrada</span><span class="value">${escapeHtml(order.km_entrada ?? '-')}</span></div>
         <div><span class="label">Tem seguro?</span><span class="value">${order.veiculo_tem_seguro ? 'Sim' : 'Não'}</span></div>
       </div>
     </section>

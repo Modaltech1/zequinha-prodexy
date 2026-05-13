@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   Badge,
   Button,
@@ -23,7 +24,6 @@ import {
 import { Search, Wrench, Car, Plus, Pencil, Trash2, Camera, FileText, Printer, Filter, MoreHorizontal, Eye } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
 import { OrderDetailsDialog, type OrdemServicoDetails } from '@/components/order-details-dialog'
-import { OrderDialog, type OrdemServicoEdit } from '@/components/order-dialog'
 import { printOrder } from '@/components/order-print'
 
 type OrdemRow = {
@@ -43,6 +43,10 @@ type OrdemRow = {
   observacoes: string | null
   criado_em: string
   atualizado_em: string | null
+  km_entrada?: number | null
+  mao_de_obra?: number | null
+  acrescimos?: number | null
+  responsavel_id?: string | null
 }
 
 type Cliente = {
@@ -57,6 +61,8 @@ type OrdemServicoItemRow = {
   os_id: string
   servico_id: string
   valor: number
+  codigo_peca?: string | null
+  observacao?: string | null
 }
 
 type Servico = {
@@ -91,6 +97,11 @@ type VeiculoRow = {
   tem_seguro?: boolean | null
 }
 
+type Collaborator = {
+  id: string
+  nome: string | null
+}
+
 type OrdersPageProps = {
   title?: string
   description?: string
@@ -102,6 +113,7 @@ export function OrdersPage({
   description = 'Cadastre, acompanhe e consulte as ordens de serviço da operação.',
   collaboratorMode = false,
 }: OrdersPageProps) {
+  const router = useRouter()
   const [orders, setOrders] = useState<OrdemRow[]>([])
   const [customers, setCustomers] = useState<Record<string, Cliente>>({})
   const [vehicles, setVehicles] = useState<Record<string, VeiculoRow>>({})
@@ -109,6 +121,7 @@ export function OrdersPage({
   const [services, setServices] = useState<Record<string, Servico>>({})
   const [photosByOrder, setPhotosByOrder] = useState<Record<string, OrdemFoto[]>>({})
   const [diagnosticsByOrder, setDiagnosticsByOrder] = useState<Record<string, OrdemDiagnostico[]>>({})
+  const [collaborators, setCollaborators] = useState<Record<string, Collaborator>>({})
 
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<'todos' | 'aberta' | 'em_andamento' | 'finalizada' | 'cancelada'>('todos')
@@ -117,20 +130,20 @@ export function OrdersPage({
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState<OrdemServicoDetails | null>(null)
 
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [selectedEditOrder, setSelectedEditOrder] = useState<OrdemServicoEdit | null>(null)
+  const basePath = collaboratorMode ? '/colaborador/ordens' : '/admin/ordens'
 
   async function loadOrders() {
     setLoading(true)
 
-    const [ordensRes, clientesRes, veiculosRes, ordemServicosRes, servicosRes, fotosRes, diagnosticosRes] = await Promise.all([
+    const [ordensRes, clientesRes, veiculosRes, ordemServicosRes, servicosRes, fotosRes, diagnosticosRes, colaboradoresRes] = await Promise.all([
       supabase.from('ordens_de_servico').select('*').order('criado_em', { ascending: false }),
       supabase.from('clientes').select('id,nome,telefone,cpf_cnpj'),
       supabase.from('veiculos').select('id,cliente_id,placa,marca,modelo,ano,cor,tem_seguro'),
-      supabase.from('ordem_servicos').select('id,os_id,servico_id,valor'),
+      supabase.from('ordem_servicos').select('id,os_id,servico_id,valor,codigo_peca,observacao'),
       supabase.from('servicos').select('id,nome,is_periodico,periodicidade_meses'),
       supabase.from('ordem_fotos').select('id,os_id,foto_url,criado_em').order('criado_em', { ascending: true }),
       supabase.from('ordem_diagnosticos').select('id,os_id,descricao,criado_em').order('criado_em', { ascending: true }),
+      supabase.from('perfis').select('id,nome').eq('papel', 'colaborador'),
     ])
 
     if (ordensRes.error) console.error(ordensRes.error)
@@ -140,6 +153,7 @@ export function OrdersPage({
     if (servicosRes.error) console.error(servicosRes.error)
     if (fotosRes.error) console.error(fotosRes.error)
     if (diagnosticosRes.error) console.error(diagnosticosRes.error)
+    if (colaboradoresRes.error) console.error(colaboradoresRes.error)
 
     const ordens = ((ordensRes.data as OrdemRow[]) || []).map((row) => ({
       ...row,
@@ -194,6 +208,13 @@ export function OrdersPage({
       }, {}))
     )
 
+    setCollaborators(
+      (((colaboradoresRes.data as Collaborator[]) || []).reduce<Record<string, Collaborator>>((acc, item) => {
+        acc[item.id] = item
+        return acc
+      }, {}))
+    )
+
     setLoading(false)
   }
 
@@ -235,12 +256,15 @@ export function OrdersPage({
   function buildOrderDetails(order: OrdemRow): OrdemServicoDetails {
     const customer = order.cliente_id ? customers[order.cliente_id] : undefined
     const vehicle = order.veiculo_id ? vehicles[order.veiculo_id] : undefined
+    const responsavel = order.responsavel_id ? collaborators[order.responsavel_id] : undefined
     const itens = (serviceRowsByOrder[order.id] || []).map((item) => ({
       id: item.id,
       nome: services[item.servico_id]?.nome || 'Serviço não identificado',
       is_periodico: services[item.servico_id]?.is_periodico,
       periodicidade_meses: services[item.servico_id]?.periodicidade_meses,
       valor: Number(item.valor || 0),
+      codigo_peca: item.codigo_peca || null,
+      observacao: item.observacao || null,
     }))
 
     return {
@@ -261,40 +285,10 @@ export function OrdersPage({
       veiculo_ano: vehicle?.ano || order.veiculo_ano,
       veiculo_cor: vehicle?.cor || order.veiculo_cor,
       veiculo_tem_seguro: typeof vehicle?.tem_seguro === 'boolean' ? vehicle.tem_seguro : Boolean(order.veiculo_tem_seguro),
-      servicos: itens,
-      diagnosticos: (diagnosticsByOrder[order.id] || []).map((item) => ({ id: item.id, descricao: item.descricao })),
-      fotos: (photosByOrder[order.id] || []).map((foto) => ({ id: foto.id, foto_url: foto.foto_url })),
-    }
-  }
-
-  function buildEditOrder(order: OrdemRow): OrdemServicoEdit {
-    const vehicle = order.veiculo_id ? vehicles[order.veiculo_id] : undefined
-    const itens = (serviceRowsByOrder[order.id] || []).map((item) => ({
-      id: item.id,
-      servico_id: item.servico_id,
-      nome: services[item.servico_id]?.nome || 'Serviço não identificado',
-      is_periodico: services[item.servico_id]?.is_periodico,
-      periodicidade_meses: services[item.servico_id]?.periodicidade_meses,
-      valor: Number(item.valor || 0),
-    }))
-
-    return {
-      id: order.id,
-      numero: order.numero,
-      cliente_id: order.cliente_id,
-      veiculo_id: order.veiculo_id,
-      veiculo_placa: vehicle?.placa || order.veiculo_placa,
-      veiculo_marca: vehicle?.marca || order.veiculo_marca,
-      veiculo_modelo: vehicle?.modelo || order.veiculo_modelo,
-      veiculo_ano: vehicle?.ano || order.veiculo_ano,
-      veiculo_cor: vehicle?.cor || order.veiculo_cor,
-      veiculo_tem_seguro: typeof vehicle?.tem_seguro === 'boolean' ? vehicle.tem_seguro : Boolean(order.veiculo_tem_seguro),
-      valor_total: order.valor_total,
-      valor_final: order.valor_final,
-      status: order.status,
-      observacoes: order.observacoes,
-      criado_em: order.criado_em,
-      atualizado_em: order.atualizado_em,
+      km_entrada: order.km_entrada == null ? null : Number(order.km_entrada),
+      responsavel_nome: responsavel?.nome || '',
+      mao_de_obra: Number(order.mao_de_obra || 0),
+      acrescimos: Number(order.acrescimos || 0),
       servicos: itens,
       diagnosticos: (diagnosticsByOrder[order.id] || []).map((item) => ({ id: item.id, descricao: item.descricao })),
       fotos: (photosByOrder[order.id] || []).map((foto) => ({ id: foto.id, foto_url: foto.foto_url })),
@@ -345,10 +339,7 @@ export function OrdersPage({
 
         <Button
           className="gap-2"
-          onClick={() => {
-            setSelectedEditOrder(null)
-            setDialogOpen(true)
-          }}
+          onClick={() => router.push(`${basePath}/nova`)}
         >
           <Plus className="h-4 w-4" />
           Nova OS
@@ -426,6 +417,7 @@ export function OrdersPage({
                       <InfoLine icon={Camera} text={`${photosCount} foto(s)`} />
                       <p><span className="font-medium text-foreground">Cliente:</span> {customer?.nome || 'Cliente não identificado'}</p>
                       <p><span className="font-medium text-foreground">Valor:</span> R$ {Number(order.valor_final || order.valor_total || 0).toFixed(2)}</p>
+                      <p><span className="font-medium text-foreground">KM entrada:</span> {order.km_entrada ?? '-'}</p>
                       <p><span className="font-medium text-foreground">Criado em:</span> {new Date(order.criado_em).toLocaleDateString('pt-BR')}</p>
                       <p><span className="font-medium text-foreground">Seguro:</span> {(vehicle?.tem_seguro || order.veiculo_tem_seguro) ? 'Sim' : 'Não'}</p>
                     </div>
@@ -460,10 +452,7 @@ export function OrdersPage({
                         </DropdownMenuItem>
 
                         <DropdownMenuItem
-                          onClick={() => {
-                            setSelectedEditOrder(buildEditOrder(order))
-                            setDialogOpen(true)
-                          }}
+                          onClick={() => router.push(`${basePath}/${order.id}/editar`)}
                         >
                           <Pencil className="h-4 w-4" />
                           Editar
@@ -489,8 +478,6 @@ export function OrdersPage({
       </Card>
 
       <OrderDetailsDialog open={detailsOpen} onOpenChange={setDetailsOpen} order={selectedOrder} />
-
-      <OrderDialog open={dialogOpen} onOpenChange={setDialogOpen} order={selectedEditOrder} onSaved={loadOrders} />
     </div>
   )
 }
