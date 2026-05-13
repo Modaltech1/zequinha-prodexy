@@ -122,6 +122,28 @@ function addMonths(date: Date, months: number) {
   return next
 }
 
+async function insertWithOptionalCreatedAt(table: 'ordem_servicos' | 'ordem_diagnosticos', rows: Record<string, any>[]) {
+  if (rows.length === 0) return
+
+  const { error } = await supabase.from(table).insert(rows)
+  if (!error) return
+
+  const message = String(error.message || '').toLowerCase()
+  const details = String((error as any).details || '').toLowerCase()
+  const hint = String((error as any).hint || '').toLowerCase()
+  const mentionsCreatedAt = [message, details, hint].some((value) =>
+    value.includes('criado_em') || value.includes('created_at')
+  )
+
+  // Alguns bancos exigem timestamp na tabela filha sem default.
+  if (!mentionsCreatedAt) throw error
+
+  const now = new Date().toISOString()
+  const rowsWithCreatedAt = rows.map((row) => ({ ...row, criado_em: now }))
+  const { error: retryError } = await supabase.from(table).insert(rowsWithCreatedAt)
+  if (retryError) throw retryError
+}
+
 export function OrderDialog({ open, onOpenChange, order, onSaved }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -429,6 +451,27 @@ export function OrderDialog({ open, onOpenChange, order, onSaved }: Props) {
     const uploadedKeys: string[] = []
 
     try {
+      const selectedServicoFromDraft = servicosDisponiveis.find((item) => item.id === novoServicoId)
+      const servicosToPersist = (() => {
+        const current = [...servicos]
+        if (selectedServicoFromDraft && !current.some((item) => item.servico_id === selectedServicoFromDraft.id)) {
+          current.push({
+            servico_id: selectedServicoFromDraft.id,
+            nome: selectedServicoFromDraft.nome,
+            is_periodico: selectedServicoFromDraft.is_periodico,
+            periodicidade_meses: selectedServicoFromDraft.periodicidade_meses,
+          })
+        }
+        return current
+      })()
+
+      const diagnosticosToPersist = (() => {
+        const current = [...diagnosticos]
+        const draft = novoDiagnostico.trim()
+        if (draft) current.push({ descricao: draft })
+        return current
+      })()
+
       const finalClienteId = await ensureCustomer()
       if (!finalClienteId) throw new Error('Selecione um cliente.')
       if (!isNovoVeiculo && !veiculoId) throw new Error('Selecione um veículo ou cadastre um novo.')
@@ -522,31 +565,30 @@ export function OrderDialog({ open, onOpenChange, order, onSaved }: Props) {
 
       if (!osId) throw new Error('OS não identificada.')
 
-      const { error: deleteServicosError } = await supabase
-        .from('ordem_servicos')
-        .delete()
-        .eq('os_id', osId)
-
-      if (deleteServicosError) throw deleteServicosError
-
-      if (servicos.length > 0) {
-        const { error: insertServicosError } = await supabase
+      if (order) {
+        const { error: deleteServicosError } = await supabase
           .from('ordem_servicos')
-          .insert(
-            servicos.map((s) => ({
-              os_id: osId,
-              servico_id: s.servico_id,
-              valor: 0,
-            }))
-          )
+          .delete()
+          .eq('os_id', osId)
 
-        if (insertServicosError) throw insertServicosError
+        if (deleteServicosError) throw deleteServicosError
+      }
+
+      if (servicosToPersist.length > 0) {
+        await insertWithOptionalCreatedAt(
+          'ordem_servicos',
+          servicosToPersist.map((s) => ({
+            os_id: osId,
+            servico_id: s.servico_id,
+            valor: 0,
+          }))
+        )
       }
 
       if (finalVeiculoId && status !== 'cancelada') {
         const today = new Date()
 
-        const periodicMaintenances = servicos
+        const periodicMaintenances = servicosToPersist
           .map((servico) => {
             const meta = servicosDisponiveis.find((item) => item.id === servico.servico_id) || servico
             const months = Number(meta.periodicidade_meses || 0)
@@ -577,20 +619,21 @@ export function OrderDialog({ open, onOpenChange, order, onSaved }: Props) {
         }
       }
 
-      const { error: deleteDiagnosticosError } = await supabase
-        .from('ordem_diagnosticos')
-        .delete()
-        .eq('os_id', osId)
-
-      if (deleteDiagnosticosError) throw deleteDiagnosticosError
-
-      const diagnosticosValidos = diagnosticos.map((item) => item.descricao.trim()).filter(Boolean)
-      if (diagnosticosValidos.length > 0) {
-        const { error: insertDiagnosticosError } = await supabase
+      if (order) {
+        const { error: deleteDiagnosticosError } = await supabase
           .from('ordem_diagnosticos')
-          .insert(diagnosticosValidos.map((descricao) => ({ os_id: osId, descricao })))
+          .delete()
+          .eq('os_id', osId)
 
-        if (insertDiagnosticosError) throw insertDiagnosticosError
+        if (deleteDiagnosticosError) throw deleteDiagnosticosError
+      }
+
+      const diagnosticosValidos = diagnosticosToPersist.map((item) => item.descricao.trim()).filter(Boolean)
+      if (diagnosticosValidos.length > 0) {
+        await insertWithOptionalCreatedAt(
+          'ordem_diagnosticos',
+          diagnosticosValidos.map((descricao) => ({ os_id: osId, descricao }))
+        )
       }
 
       const oldPhotoIds = new Set((order?.fotos || []).map((f) => f.id).filter(Boolean))
