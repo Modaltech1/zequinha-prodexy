@@ -63,6 +63,7 @@ export type OrdemServicoEdit = {
     servico_id: string
     nome: string
     valor?: number
+    quantidade?: number | null
     codigo_peca?: string | null
     observacao?: string | null
     is_periodico?: boolean | null
@@ -82,6 +83,7 @@ type ServicoSelecionado = {
   servico_id: string
   nome: string
   valor: string
+  quantidade: string
   codigo_peca: string
   observacao: string
   is_periodico?: boolean | null
@@ -139,6 +141,15 @@ function buildOrderVehicleOption(order: OrdemServicoEdit | null): VeiculoOption 
 
 function normalizeDigits(value: string) {
   return value.replace(/\D/g, '')
+}
+
+function parseQuantidade(value: string | number | null | undefined) {
+  const parsed = typeof value === 'number' ? value : parseInt(String(value ?? '').replace(/\D/g, ''), 10)
+  return Number.isFinite(parsed) && parsed >= 1 ? parsed : 1
+}
+
+function servicoLineTotal(unitValor: string | number | null | undefined, quantidade: string | number | null | undefined) {
+  return parseMoney(String(unitValor ?? '')) * parseQuantidade(quantidade)
 }
 
 function parseMoney(value: string) {
@@ -342,6 +353,7 @@ export function OrderForm({
           servico_id: s.servico_id,
           nome: s.nome,
           valor: formatMoneyInput(s.valor),
+          quantidade: String(s.quantidade ?? 1),
           codigo_peca: s.codigo_peca || '',
           observacao: s.observacao || '',
           is_periodico: s.is_periodico,
@@ -390,7 +402,7 @@ export function OrderForm({
   const totalFotos = existingPhotos.length + newFiles.length
 
   const subtotalServicos = useMemo(
-    () => servicos.reduce((sum, item) => sum + parseMoney(item.valor), 0),
+    () => servicos.reduce((sum, item) => sum + servicoLineTotal(item.valor, item.quantidade), 0),
     [servicos]
   )
   const maoDeObraValue = useMemo(() => parseMoney(maoDeObra), [maoDeObra])
@@ -461,6 +473,7 @@ export function OrderForm({
         servico_id: selected.id,
         nome: selected.nome,
         valor: '',
+        quantidade: '1',
         codigo_peca: '',
         observacao: '',
         is_periodico: selected.is_periodico,
@@ -574,6 +587,7 @@ export function OrderForm({
             servico_id: selectedServicoFromDraft.id,
             nome: selectedServicoFromDraft.nome,
             valor: '',
+            quantidade: '1',
             codigo_peca: '',
             observacao: '',
             is_periodico: selectedServicoFromDraft.is_periodico,
@@ -651,7 +665,10 @@ export function OrderForm({
         finalVeiculoTemSeguro = Boolean(selected.tem_seguro)
       }
 
-      const subtotalServicosToPersist = servicosToPersist.reduce((sum, item) => sum + parseMoney(item.valor), 0)
+      const subtotalServicosToPersist = servicosToPersist.reduce(
+        (sum, item) => sum + servicoLineTotal(item.valor, item.quantidade),
+        0
+      )
       const maoDeObraToPersist = parseMoney(maoDeObra)
       const acrescimosToPersist = parseMoney(acrescimos)
       const valorFinalToPersist = subtotalServicosToPersist + maoDeObraToPersist + acrescimosToPersist
@@ -722,6 +739,7 @@ export function OrderForm({
             os_id: osId,
             servico_id: s.servico_id,
             valor: parseMoney(s.valor),
+            quantidade: parseQuantidade(s.quantidade),
             codigo_peca: s.codigo_peca.trim() || null,
             observacao: s.observacao.trim() || null,
           }))
@@ -1122,16 +1140,30 @@ export function OrderForm({
             {servicos.map((servico, index) => (
               <div key={`${servico.servico_id}-${index}`} className="space-y-3 rounded-lg border p-3">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="font-medium">{servico.nome}</p>
+                  <p className="font-medium">
+                    {servico.nome} x{parseQuantidade(servico.quantidade)}
+                  </p>
                   <Button type="button" variant="outline" size="sm" className="gap-2" onClick={() => handleRemoveServico(index)}>
                     <Trash2 className="h-4 w-4" />
                     Remover
                   </Button>
                 </div>
 
-                <div className="grid gap-3 md:grid-cols-3">
+                <div className="grid gap-3 md:grid-cols-4">
                   <div className="space-y-2">
-                    <Label>Valor do serviço (opcional)</Label>
+                    <Label>Quantidade</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      step={1}
+                      value={servico.quantidade}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        updateServico(index, { quantidade: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Valor unitário (opcional)</Label>
                     <Input
                       value={servico.valor}
                       placeholder="Ex.: 120,00"

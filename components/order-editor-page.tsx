@@ -36,6 +36,7 @@ type OrdemServicoItemRow = {
   os_id: string
   servico_id: string
   valor: number | null
+  quantidade?: number | null
   codigo_peca?: string | null
   observacao?: string | null
 }
@@ -219,7 +220,7 @@ export function OrderEditorPage({
 
       const row = orderRes.data as OrdemRow
       const [serviceRowsRes, servicosRes, diagnosticosRes, fotosRes] = await Promise.all([
-        supabase.from('ordem_servicos').select('id,os_id,servico_id,valor,codigo_peca,observacao').eq('os_id', effectiveOrderId),
+        supabase.from('ordem_servicos').select('id,os_id,servico_id,valor,quantidade,codigo_peca,observacao').eq('os_id', effectiveOrderId),
         supabase.from('servicos').select('id,nome,is_periodico,periodicidade_meses'),
         supabase.from('ordem_diagnosticos').select('id,os_id,descricao').eq('os_id', effectiveOrderId),
         supabase.from('ordem_fotos').select('id,os_id,foto_url').eq('os_id', effectiveOrderId),
@@ -271,6 +272,7 @@ export function OrderEditorPage({
           servico_id: item.servico_id,
           nome: servicesById[item.servico_id]?.nome || 'Serviço não identificado',
           valor: Number(item.valor || 0),
+          quantidade: item.quantidade == null ? 1 : Number(item.quantidade),
           codigo_peca: item.codigo_peca || null,
           observacao: item.observacao || null,
           is_periodico: servicesById[item.servico_id]?.is_periodico,

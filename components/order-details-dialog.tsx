@@ -8,6 +8,7 @@ export type OrdemServicoItem = {
   id: string
   nome: string
   valor?: number
+  quantidade?: number | null
   codigo_peca?: string | null
   observacao?: string | null
 }
@@ -76,14 +77,18 @@ export function OrderDetailsDialog({
 
           <Section title="Serviços autorizados">
             <div className="space-y-2">
-              {order.servicos.map((item) => (
+              {order.servicos.map((item) => {
+                const quantidade = Math.max(1, Number(item.quantidade || 1))
+                const valorLinha = Number(item.valor || 0) * quantidade
+                return (
                 <div key={item.id} className="rounded-lg border p-3">
-                  <p className="font-medium">{item.nome}</p>
-                  <p className="text-sm text-muted-foreground">Valor: R$ {Number(item.valor || 0).toFixed(2)}</p>
+                  <p className="font-medium">{item.nome} x{quantidade}</p>
+                  <p className="text-sm text-muted-foreground">Valor: R$ {valorLinha.toFixed(2)}</p>
                   {item.codigo_peca && <p className="text-sm text-muted-foreground">Código peça: {item.codigo_peca}</p>}
                   {item.observacao && <p className="text-sm text-muted-foreground">Obs: {item.observacao}</p>}
                 </div>
-              ))}
+                )
+              })}
               {order.servicos.length === 0 && <p className="text-sm text-muted-foreground">Nenhum serviço adicionado.</p>}
             </div>
           </Section>

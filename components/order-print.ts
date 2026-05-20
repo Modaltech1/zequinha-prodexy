@@ -21,7 +21,7 @@ export type PrintableOrder = {
   mao_de_obra?: number | null
   acrescimos?: number | null
   forma_pagamento?: string | null
-  servicos: { id: string; nome: string; valor?: number; codigo_peca?: string | null; observacao?: string | null }[]
+  servicos: { id: string; nome: string; valor?: number; quantidade?: number | null; codigo_peca?: string | null; observacao?: string | null }[]
   diagnosticos: { id: string; descricao: string }[]
   fotos?: { id: string; foto_url: string }[]
 }
@@ -69,11 +69,14 @@ export function buildOrderPrintHtml(order: PrintableOrder, logoUrl?: string) {
   const vehicle = [order.veiculo_marca, order.veiculo_modelo, order.veiculo_ano].filter(Boolean).join(' ')
   const servicesHtml = order.servicos.length
     ? order.servicos.map((item) => {
+      const quantidade = Math.max(1, Number(item.quantidade || 1))
+      const valorUnitario = Number(item.valor || 0)
+      const valorLinha = valorUnitario * quantidade
       const parts = [
-        `<strong>${escapeHtml(item.nome)}</strong>`,
+        `<strong>${escapeHtml(item.nome)} x${quantidade}</strong>`,
         item.codigo_peca ? `Código peça: ${escapeHtml(item.codigo_peca)}` : '',
         item.observacao ? `Obs: ${escapeHtml(item.observacao)}` : '',
-        typeof item.valor === 'number' && item.valor > 0 ? `Valor: ${escapeHtml(formatMoney(item.valor))}` : '',
+        valorLinha > 0 ? `Valor: ${escapeHtml(formatMoney(valorLinha))}` : '',
       ].filter(Boolean)
       return `<li>${parts.join(' • ')}</li>`
     }).join('')

@@ -62,6 +62,7 @@ type OrdemServicoItemRow = {
   os_id: string
   servico_id: string
   valor: number
+  quantidade?: number | null
   codigo_peca?: string | null
   observacao?: string | null
 }
@@ -140,7 +141,7 @@ export function OrdersPage({
       supabase.from('ordens_de_servico').select('*').order('criado_em', { ascending: false }),
       supabase.from('clientes').select('id,nome,telefone,cpf_cnpj'),
       supabase.from('veiculos').select('id,cliente_id,placa,marca,modelo,ano,cor,tem_seguro'),
-      supabase.from('ordem_servicos').select('id,os_id,servico_id,valor,codigo_peca,observacao'),
+      supabase.from('ordem_servicos').select('id,os_id,servico_id,valor,quantidade,codigo_peca,observacao'),
       supabase.from('servicos').select('id,nome,is_periodico,periodicidade_meses'),
       supabase.from('ordem_fotos').select('id,os_id,foto_url,criado_em').order('criado_em', { ascending: true }),
       supabase.from('ordem_diagnosticos').select('id,os_id,descricao,criado_em').order('criado_em', { ascending: true }),
@@ -264,6 +265,7 @@ export function OrdersPage({
       is_periodico: services[item.servico_id]?.is_periodico,
       periodicidade_meses: services[item.servico_id]?.periodicidade_meses,
       valor: Number(item.valor || 0),
+      quantidade: item.quantidade == null ? 1 : Number(item.quantidade),
       codigo_peca: item.codigo_peca || null,
       observacao: item.observacao || null,
     }))
