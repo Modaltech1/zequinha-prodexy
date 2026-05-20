@@ -20,8 +20,10 @@ export type PrintableOrder = {
   responsavel_nome?: string | null
   mao_de_obra?: number | null
   acrescimos?: number | null
+  forma_pagamento?: string | null
   servicos: { id: string; nome: string; valor?: number; codigo_peca?: string | null; observacao?: string | null }[]
   diagnosticos: { id: string; descricao: string }[]
+  fotos?: { id: string; foto_url: string }[]
 }
 
 function escapeHtml(value: unknown) {
@@ -54,8 +56,16 @@ function getWorkshopData(order: PrintableOrder) {
   }
 }
 
-export function buildOrderPrintHtml(order: PrintableOrder) {
+const LOGO_PATH = '/icon.jpg'
+
+export function getOrderPrintLogoUrl(origin?: string) {
+  const base = origin ?? (typeof window !== 'undefined' ? window.location.origin : '')
+  return `${base}${LOGO_PATH}`
+}
+
+export function buildOrderPrintHtml(order: PrintableOrder, logoUrl?: string) {
   const oficina = getWorkshopData(order)
+  const logoSrc = logoUrl ?? getOrderPrintLogoUrl()
   const vehicle = [order.veiculo_marca, order.veiculo_modelo, order.veiculo_ano].filter(Boolean).join(' ')
   const servicesHtml = order.servicos.length
     ? order.servicos.map((item) => {
@@ -71,6 +81,14 @@ export function buildOrderPrintHtml(order: PrintableOrder) {
   const diagnosticsHtml = order.diagnosticos.length
     ? order.diagnosticos.map((item) => `<li>${escapeHtml(item.descricao)}</li>`).join('')
     : '<li>Nenhum diagnóstico não autorizado registrado.</li>'
+  const photosHtml = (order.fotos?.length ?? 0) > 0
+    ? order.fotos!
+      .map(
+        (foto) =>
+          `<figure class="photo-item"><img src="${escapeHtml(foto.foto_url)}" alt="Foto da OS" loading="eager" /></figure>`
+      )
+      .join('')
+    : '<p class="muted">Nenhuma foto registrada.</p>'
 
   return `<!doctype html>
 <html lang="pt-BR">
@@ -83,6 +101,8 @@ export function buildOrderPrintHtml(order: PrintableOrder) {
     body { font-family: Arial, Helvetica, sans-serif; color: #111827; margin: 0; font-size: 12px; line-height: 1.45; }
     .sheet { width: 100%; }
     .header { display: flex; justify-content: space-between; gap: 24px; border-bottom: 2px solid #111827; padding-bottom: 12px; margin-bottom: 16px; }
+    .brand-row { display: flex; align-items: center; gap: 12px; }
+    .brand-logo { width: 72px; height: 72px; object-fit: contain; flex-shrink: 0; }
     .brand h1 { margin: 0 0 4px; font-size: 20px; }
     .muted { color: #4b5563; }
     .os-title { text-align: right; }
@@ -98,6 +118,10 @@ export function buildOrderPrintHtml(order: PrintableOrder) {
     .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 34px; }
     .signature { border-top: 1px solid #111827; padding-top: 8px; text-align: center; }
     .terms { font-size: 11px; color: #374151; }
+    .warranty-note { margin-top: 8px; font-weight: 600; }
+    .photos-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 8px; }
+    .photo-item { margin: 0; break-inside: avoid; page-break-inside: avoid; }
+    .photo-item img { width: 100%; max-height: 200px; object-fit: cover; border: 1px solid #d1d5db; border-radius: 4px; display: block; }
     @media print { .no-print { display: none; } }
   </style>
 </head>
@@ -105,10 +129,15 @@ export function buildOrderPrintHtml(order: PrintableOrder) {
   <main class="sheet">
     <div class="header">
       <div class="brand">
-        <h1>${escapeHtml(oficina.nome)}</h1>
-        <div class="muted">${escapeHtml(oficina.cnpj)}</div>
-        <div class="muted">${escapeHtml(oficina.endereco)}</div>
-        <div class="muted">${escapeHtml(oficina.telefone)}</div>
+        <div class="brand-row">
+          <img class="brand-logo" src="${escapeHtml(logoSrc)}" alt="${escapeHtml(oficina.nome)}" loading="eager" />
+          <div>
+            <h1>${escapeHtml(oficina.nome)}</h1>
+            <div class="muted">${escapeHtml(oficina.cnpj)}</div>
+            <div class="muted">${escapeHtml(oficina.endereco)}</div>
+            <div class="muted">${escapeHtml(oficina.telefone)}</div>
+          </div>
+        </div>
       </div>
       <div class="os-title">
         <h2>Ordem de Serviço</h2>
@@ -147,12 +176,25 @@ export function buildOrderPrintHtml(order: PrintableOrder) {
     <section class="section">
       <h3>Diagnóstico / itens identificados não autorizados</h3>
       <p class="terms">Os itens abaixo foram identificados durante a avaliação, mas não foram autorizados pelo responsável no momento desta OS.</p>
+      <p class="terms warranty-note">* A garantia dos serviços efetuados, só é validada mediante a execução do diagnóstico apresentado</p>
       <ul>${diagnosticsHtml}</ul>
     </section>
 
     <section class="section">
       <h3>Observações</h3>
       <p>${escapeHtml(order.observacoes || 'Sem observações.')}</p>
+    </section>
+
+    <section class="section">
+      <h3>Fotos da OS</h3>
+      <div class="photos-grid">${photosHtml}</div>
+    </section>
+
+    <section class="section">
+      <h3>Pagamento</h3>
+      <div class="grid">
+        <div><span class="label">Forma de pagamento</span><span class="value">${escapeHtml(order.forma_pagamento || 'Não informado')}</span></div>
+      </div>
     </section>
 
     <section class="section total">
@@ -173,15 +215,35 @@ export function buildOrderPrintHtml(order: PrintableOrder) {
 </html>`
 }
 
+function printWhenImagesReady(printWindow: Window) {
+  const images = Array.from(printWindow.document.images)
+  if (images.length === 0) {
+    printWindow.print()
+    return
+  }
+
+  let pending = images.length
+  const tryPrint = () => {
+    pending -= 1
+    if (pending <= 0) printWindow.print()
+  }
+
+  for (const image of images) {
+    if (image.complete) tryPrint()
+    else {
+      image.onload = tryPrint
+      image.onerror = tryPrint
+    }
+  }
+}
+
 export function printOrder(order: PrintableOrder) {
   if (typeof window === 'undefined') return
   const printWindow = window.open('', '_blank', 'width=900,height=1200')
   if (!printWindow) return
   printWindow.document.open()
-  printWindow.document.write(buildOrderPrintHtml(order))
+  printWindow.document.write(buildOrderPrintHtml(order, getOrderPrintLogoUrl(window.location.origin)))
   printWindow.document.close()
   printWindow.focus()
-  setTimeout(() => {
-    printWindow.print()
-  }, 250)
+  printWhenImagesReady(printWindow)
 }

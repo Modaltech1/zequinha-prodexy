@@ -47,6 +47,7 @@ type OrdemRow = {
   mao_de_obra?: number | null
   acrescimos?: number | null
   responsavel_id?: string | null
+  forma_pagamento?: string | null
 }
 
 type Cliente = {
@@ -289,6 +290,7 @@ export function OrdersPage({
       responsavel_nome: responsavel?.nome || '',
       mao_de_obra: Number(order.mao_de_obra || 0),
       acrescimos: Number(order.acrescimos || 0),
+      forma_pagamento: order.forma_pagamento || null,
       servicos: itens,
       diagnosticos: (diagnosticsByOrder[order.id] || []).map((item) => ({ id: item.id, descricao: item.descricao })),
       fotos: (photosByOrder[order.id] || []).map((foto) => ({ id: foto.id, foto_url: foto.foto_url })),

@@ -106,6 +106,7 @@ export function OrderDetailsDialog({
               <p>Mão de obra: <span className="font-medium">R$ {Number(order.mao_de_obra || 0).toFixed(2)}</span></p>
               <p>Acréscimos: <span className="font-medium">R$ {Number(order.acrescimos || 0).toFixed(2)}</span></p>
               <p>Responsável: <span className="font-medium">{order.responsavel_nome || '-'}</span></p>
+              <p>Forma de pagamento: <span className="font-medium">{order.forma_pagamento || '-'}</span></p>
               <p>Criado em: <span className="font-medium">{new Date(order.criado_em).toLocaleString('pt-BR')}</span></p>
               <p>Atualizado em: <span className="font-medium">{order.atualizado_em ? new Date(order.atualizado_em).toLocaleString('pt-BR') : '-'}</span></p>
             </div>

@@ -28,6 +28,7 @@ type OrdemRow = {
   mao_de_obra?: number | null
   acrescimos?: number | null
   responsavel_id?: string | null
+  forma_pagamento?: string | null
 }
 
 type OrdemServicoItemRow = {
@@ -264,6 +265,7 @@ export function OrderEditorPage({
         mao_de_obra: row.mao_de_obra == null ? 0 : Number(row.mao_de_obra),
         acrescimos: row.acrescimos == null ? 0 : Number(row.acrescimos),
         responsavel_id: row.responsavel_id || null,
+        forma_pagamento: row.forma_pagamento || null,
         servicos: ((serviceRowsRes.data as OrdemServicoItemRow[]) || []).map((item) => ({
           id: item.id,
           servico_id: item.servico_id,

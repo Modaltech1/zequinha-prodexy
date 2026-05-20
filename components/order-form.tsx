@@ -57,6 +57,7 @@ export type OrdemServicoEdit = {
   mao_de_obra?: number | null
   acrescimos?: number | null
   responsavel_id?: string | null
+  forma_pagamento?: string | null
   servicos: {
     id?: string
     servico_id: string
@@ -91,6 +92,17 @@ type DiagnosticoSelecionado = {
   id?: string
   descricao: string
 }
+
+const FORMAS_PAGAMENTO = [
+  'Pix',
+  'Dinheiro',
+  'Cartão de débito',
+  'Cartão de crédito',
+  'Transferência',
+  'Boleto',
+  'Fiado',
+  'A definir',
+] as const
 
 type VeiculoOption = {
   id: string
@@ -214,6 +226,7 @@ export function OrderForm({
   const [responsavelId, setResponsavelId] = useState('')
   const [maoDeObra, setMaoDeObra] = useState('')
   const [acrescimos, setAcrescimos] = useState('')
+  const [formaPagamento, setFormaPagamento] = useState('')
 
   const [servicos, setServicos] = useState<ServicoSelecionado[]>([])
   const [novoServicoId, setNovoServicoId] = useState('')
@@ -322,6 +335,7 @@ export function OrderForm({
       setResponsavelId(order.responsavel_id || '')
       setMaoDeObra(formatMoneyInput(order.mao_de_obra))
       setAcrescimos(formatMoneyInput(order.acrescimos))
+      setFormaPagamento(order.forma_pagamento || '')
       setObservacoes(order.observacoes || '')
       setServicos(
         (order.servicos || []).map((s) => ({
@@ -359,6 +373,7 @@ export function OrderForm({
       setResponsavelId('')
       setMaoDeObra('')
       setAcrescimos('')
+      setFormaPagamento('')
       setObservacoes('')
       setServicos([])
       setDiagnosticos([])
@@ -653,6 +668,7 @@ export function OrderForm({
         veiculo_tem_seguro: finalVeiculoTemSeguro,
         km_entrada: kmEntradaValue,
         responsavel_id: responsavelId || null,
+        forma_pagamento: formaPagamento || null,
         mao_de_obra: maoDeObraToPersist,
         acrescimos: acrescimosToPersist,
         valor_total: subtotalServicosToPersist,
@@ -853,7 +869,7 @@ export function OrderForm({
       <form onSubmit={handleSubmit} className="space-y-6">
         {error && <p className="text-sm text-destructive">{error}</p>}
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5 rounded-xl border p-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 rounded-xl border p-4">
           <div className="space-y-2">
             <Label htmlFor="numero">Número da OS</Label>
             <Input id="numero" value={numero} placeholder="2026-001" onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNumero(e.target.value)} />
@@ -909,6 +925,23 @@ export function OrderForm({
               placeholder="Ex.: 150,00"
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAcrescimos(e.target.value)}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Forma de pagamento</Label>
+            <Select value={formaPagamento || '__none'} onValueChange={(value: string) => setFormaPagamento(value === '__none' ? '' : value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none">Não informado</SelectItem>
+                {FORMAS_PAGAMENTO.map((item) => (
+                  <SelectItem key={item} value={item}>
+                    {item}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
