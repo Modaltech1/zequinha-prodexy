@@ -22,6 +22,7 @@ type ClienteOption = {
   telefone?: string | null
   email?: string | null
   nascimento?: string | null
+  whatsapp_opt_in?: boolean | null
 }
 
 type ServicoOption = {
@@ -195,6 +196,99 @@ async function insertWithOptionalCreatedAt(table: 'ordem_servicos' | 'ordem_diag
   if (retryError) throw retryError
 }
 
+function normalizeWhatsappPhone(telefone: string | null | undefined) {
+  if (!telefone) return null
+
+  const digits = telefone.replace(/\D/g, '')
+  if (!digits) return null
+
+  if (digits.startsWith('55') && (digits.length === 12 || digits.length === 13)) return digits
+  if (digits.length === 10 || digits.length === 11) return `55${digits}`
+
+  return null
+}
+
+function formatCurrencyBRL(value: number) {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(Number(value || 0))
+}
+
+function buildVehicleLabel(params: {
+  placa?: string | null
+  marca?: string | null
+  modelo?: string | null
+  ano?: string | null
+}) {
+  const placa = params.placa?.trim()
+  const vehicle = [params.marca, params.modelo, params.ano].filter(Boolean).join(' ').trim()
+
+  if (placa && vehicle) return `${placa} - ${vehicle}`
+  if (placa) return placa
+
+  return vehicle || '-'
+}
+
+async function enqueueFinishedOrderWhatsappMessage(params: {
+  osId: string
+  cliente: ClienteOption | null | undefined
+  numero: string
+  veiculoLabel: string
+  servicosResumo: string
+  valorFinal: number
+  fotos: string[]
+}) {
+  const { osId, cliente, numero, veiculoLabel, servicosResumo, valorFinal, fotos } = params
+
+  if (!cliente) return
+  if (cliente.whatsapp_opt_in !== true) return
+
+  const telefoneDestino = normalizeWhatsappPhone(cliente.telefone)
+  if (!telefoneDestino) return
+
+  try {
+    const { data: existing, error: existingError } = await supabase
+      .from('whatsapp_outbox')
+      .select('id')
+      .eq('tipo', 'os_finalizada')
+      .eq('os_id', osId)
+      .maybeSingle()
+
+    if (existingError) {
+      console.warn('Erro ao verificar whatsapp_outbox existente:', existingError)
+      return
+    }
+
+    if (existing?.id) return
+
+    const { error: insertError } = await supabase.from('whatsapp_outbox').insert({
+      tipo: 'os_finalizada',
+      cliente_id: cliente.id,
+      os_id: osId,
+      manutencao_id: null,
+      telefone_destino: telefoneDestino,
+      template_name: 'os_finalizada',
+      status: 'pendente',
+      scheduled_for: new Date().toISOString(),
+      payload: {
+        nome_cliente: cliente.nome || 'Cliente',
+        numero_os: numero,
+        veiculo: veiculoLabel,
+        servicos: servicosResumo,
+        valor_final: formatCurrencyBRL(valorFinal),
+        fotos,
+      },
+    })
+
+    if (insertError) {
+      console.error('Erro ao enfileirar mensagem WhatsApp da OS finalizada:', insertError)
+    }
+  } catch (err) {
+    console.error('Erro ao enfileirar mensagem WhatsApp da OS finalizada:', err)
+  }
+}
+
 export function OrderForm({
   order,
   onSaved,
@@ -221,6 +315,7 @@ export function OrderForm({
   const [newClientPhone, setNewClientPhone] = useState('')
   const [newClientEmail, setNewClientEmail] = useState('')
   const [newClientBirth, setNewClientBirth] = useState('')
+  const [newClientWhatsappOptIn, setNewClientWhatsappOptIn] = useState(true)
 
   const [veiculoId, setVeiculoId] = useState('')
   const [isNovoVeiculo, setIsNovoVeiculo] = useState(true)
@@ -250,7 +345,7 @@ export function OrderForm({
 
   async function loadBaseData(selectedClienteId?: string | null) {
     const [clientesRes, servicosRes, colaboradoresRes] = await Promise.all([
-      supabase.from('clientes').select('id, nome, cpf_cnpj, telefone, email, nascimento').order('nome', { ascending: true }),
+      supabase.from('clientes').select('id, nome, cpf_cnpj, telefone, email, nascimento, whatsapp_opt_in').order('nome', { ascending: true }),
       supabase.from('servicos').select('id, nome, is_periodico, periodicidade_meses').order('nome', { ascending: true }),
       supabase.from('perfis').select('id,nome').eq('papel', 'colaborador').eq('ativo', true).order('nome', { ascending: true }),
     ])
@@ -264,7 +359,7 @@ export function OrderForm({
     if (selectedClienteId && !clientesList.some((cliente) => cliente.id === selectedClienteId)) {
       const { data: selectedCliente, error: selectedClienteError } = await supabase
         .from('clientes')
-        .select('id, nome, cpf_cnpj, telefone, email, nascimento')
+        .select('id, nome, cpf_cnpj, telefone, email, nascimento, whatsapp_opt_in')
         .eq('id', selectedClienteId)
         .maybeSingle()
 
@@ -372,6 +467,7 @@ export function OrderForm({
       setNewClientPhone('')
       setNewClientEmail('')
       setNewClientBirth('')
+      setNewClientWhatsappOptIn(true)
       setVeiculoId('')
       setIsNovoVeiculo(true)
       setVeiculoPlaca('')
@@ -547,8 +643,27 @@ export function OrderForm({
     }
   }
 
-  async function ensureCustomer() {
-    if (clienteId) return clienteId
+  async function ensureCustomer(): Promise<{ id: string; cliente: ClienteOption }> {
+    if (clienteId) {
+      let cliente = clientes.find((item) => item.id === clienteId)
+
+      if (!cliente) {
+        const { data, error } = await supabase
+          .from('clientes')
+          .select('id, nome, cpf_cnpj, telefone, email, nascimento, whatsapp_opt_in')
+          .eq('id', clienteId)
+          .maybeSingle()
+
+        if (error) throw error
+        if (!data) throw new Error('Cliente selecionado não encontrado.')
+
+        cliente = data as ClienteOption
+        setClientes((prev) => mergeById(prev, cliente!))
+      }
+
+      return { id: clienteId, cliente }
+    }
+
     if (!createClientInline) throw new Error('Selecione um cliente ou cadastre um novo pelo formulário.')
     if (!newClientName.trim()) throw new Error('Informe o nome do novo cliente.')
 
@@ -560,15 +675,16 @@ export function OrderForm({
         telefone: newClientPhone.trim() || null,
         email: newClientEmail.trim() || null,
         nascimento: newClientBirth || null,
+        whatsapp_opt_in: newClientWhatsappOptIn,
       })
-      .select('id, nome, cpf_cnpj, telefone, email, nascimento')
+      .select('id, nome, cpf_cnpj, telefone, email, nascimento, whatsapp_opt_in')
       .single()
 
     if (error) throw error
     const created = data as ClienteOption
     setClientes((prev) => [...prev, created].sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || ''))))
     setClienteId(created.id)
-    return created.id
+    return { id: created.id, cliente: created }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -604,7 +720,10 @@ export function OrderForm({
         return current
       })()
 
-      const finalClienteId = await ensureCustomer()
+      const shouldTriggerFinalizationSideEffects =
+        status === 'finalizada' && order?.status !== 'finalizada'
+
+      const { id: finalClienteId, cliente: clienteForWhatsapp } = await ensureCustomer()
       if (!finalClienteId) throw new Error('Selecione um cliente.')
       if (!isNovoVeiculo && !veiculoId) throw new Error('Selecione um veículo ou cadastre um novo.')
       if (isNovoVeiculo && !veiculoPlaca.trim()) throw new Error('Informe a placa do veículo.')
@@ -746,7 +865,7 @@ export function OrderForm({
         )
       }
 
-      if (finalVeiculoId && status !== 'cancelada') {
+      if (finalVeiculoId && shouldTriggerFinalizationSideEffects) {
         const today = new Date()
 
         const periodicMaintenances = servicosToPersist
@@ -830,6 +949,8 @@ export function OrderForm({
         if (deletePhotosError) throw deletePhotosError
       }
 
+      const uploadedPhotoUrls: string[] = []
+
       if (newFiles.length > 0) {
         const uploaded = []
         for (const file of newFiles) {
@@ -840,6 +961,7 @@ export function OrderForm({
             foto_url: result.url,
             criado_em: new Date().toISOString(),
           })
+          uploadedPhotoUrls.push(result.url)
         }
 
         const { error: insertPhotosError } = await supabase
@@ -847,6 +969,28 @@ export function OrderForm({
           .insert(uploaded)
 
         if (insertPhotosError) throw insertPhotosError
+      }
+
+      const finalPhotoUrls = [
+        ...existingPhotos.map((foto) => foto.foto_url),
+        ...uploadedPhotoUrls,
+      ]
+
+      if (shouldTriggerFinalizationSideEffects) {
+        await enqueueFinishedOrderWhatsappMessage({
+          osId,
+          cliente: clienteForWhatsapp,
+          numero: numero.trim() || osId,
+          veiculoLabel: buildVehicleLabel({
+            placa: finalVeiculoPlaca,
+            marca: finalVeiculoMarca,
+            modelo: finalVeiculoModelo,
+            ano: finalVeiculoAno,
+          }),
+          servicosResumo: servicosToPersist.map((item) => item.nome).join(', '),
+          valorFinal: valorFinalToPersist,
+          fotos: finalPhotoUrls,
+        })
       }
 
       onSaved?.()
@@ -1035,6 +1179,18 @@ export function OrderForm({
               <div className="space-y-2">
                 <Label htmlFor="novo-cliente-nascimento">Nascimento</Label>
                 <Input id="novo-cliente-nascimento" type="date" value={newClientBirth} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewClientBirth(e.target.value)} />
+              </div>
+              <div className="flex items-start gap-2 sm:col-span-2 lg:col-span-3">
+                <input
+                  id="novo-cliente-whatsapp-opt-in"
+                  type="checkbox"
+                  className="mt-1 h-4 w-4"
+                  checked={newClientWhatsappOptIn}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewClientWhatsappOptIn(e.target.checked)}
+                />
+                <Label htmlFor="novo-cliente-whatsapp-opt-in" className="font-normal leading-snug">
+                  Autoriza receber mensagens pelo WhatsApp.
+                </Label>
               </div>
             </div>
           )}

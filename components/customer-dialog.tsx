@@ -21,6 +21,7 @@ interface Customer {
     telefone: string | null
     cpf_cnpj: string | null
     nascimento: string | null
+    whatsapp_opt_in?: boolean
     totalPurchases?: number
     totalOrders?: number
 }
@@ -43,6 +44,7 @@ export function CustomerDialog({
         telefone: '',
         cpf_cnpj: '',
         nascimento: '',
+        whatsapp_opt_in: true,
     })
 
     const [loading, setLoading] = useState(false)
@@ -55,6 +57,7 @@ export function CustomerDialog({
                 telefone: customer.telefone ?? '',
                 cpf_cnpj: customer.cpf_cnpj ?? '',
                 nascimento: customer.nascimento ?? '',
+                whatsapp_opt_in: Boolean(customer.whatsapp_opt_in),
             })
         } else {
             setFormData({
@@ -62,6 +65,7 @@ export function CustomerDialog({
                 telefone: '',
                 cpf_cnpj: '',
                 nascimento: '',
+                whatsapp_opt_in: true,
             })
         }
 
@@ -79,6 +83,7 @@ export function CustomerDialog({
                 telefone: formData.telefone.trim() || null,
                 cpf_cnpj: formData.cpf_cnpj.trim() || null,
                 nascimento: formData.nascimento || null,
+                whatsapp_opt_in: formData.whatsapp_opt_in,
             }
 
             if (!payload.nome) {
@@ -170,6 +175,19 @@ export function CustomerDialog({
                         <p className="text-xs text-muted-foreground">
                             Campo opcional. Use para campanhas de aniversário e relacionamento com o cliente.
                         </p>
+                    </div>
+
+                    <div className="flex items-start gap-2">
+                        <input
+                            id="whatsapp-opt-in"
+                            type="checkbox"
+                            className="mt-1 h-4 w-4"
+                            checked={formData.whatsapp_opt_in}
+                            onChange={(e) => setFormData({ ...formData, whatsapp_opt_in: e.target.checked })}
+                        />
+                        <Label htmlFor="whatsapp-opt-in" className="font-normal leading-snug">
+                            Autoriza receber mensagens pelo WhatsApp.
+                        </Label>
                     </div>
 
                     <DialogFooter>

@@ -25,6 +25,7 @@ import { Search, Wrench, Car, Plus, Pencil, Trash2, Camera, FileText, Printer, F
 import { supabase } from '@/lib/supabaseClient'
 import { OrderDetailsDialog, type OrdemServicoDetails } from '@/components/order-details-dialog'
 import { printOrder } from '@/components/order-print'
+import { formatOsNumber } from '@/lib/format-os-number'
 
 type OrdemRow = {
   id: string
@@ -300,7 +301,7 @@ export function OrdersPage({
   }
 
   async function handleDelete(order: OrdemRow) {
-    const confirmed = window.confirm(`Deseja excluir a OS "${order.numero || order.id.slice(0, 8)}"?`)
+    const confirmed = window.confirm(`Deseja excluir a OS "${formatOsNumber(order.numero, order.id)}"?`)
     if (!confirmed) return
 
     const fotos = photosByOrder[order.id] || []
@@ -408,7 +409,7 @@ export function OrdersPage({
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                   <div className="space-y-3">
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-semibold">OS #{order.numero || order.id.slice(0, 8)}</p>
+                      <p className="font-semibold">OS #{formatOsNumber(order.numero, order.id)}</p>
                       <Badge variant={order.status === 'finalizada' ? 'default' : 'secondary'}>
                         {order.status || 'Sem status'}
                       </Badge>
@@ -437,7 +438,7 @@ export function OrdersPage({
                       </DropdownMenuTrigger>
 
                       <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuLabel>OS #{order.numero || order.id.slice(0, 8)}</DropdownMenuLabel>
+                        <DropdownMenuLabel>OS #{formatOsNumber(order.numero, order.id)}</DropdownMenuLabel>
                         <DropdownMenuSeparator />
 
                         <DropdownMenuItem

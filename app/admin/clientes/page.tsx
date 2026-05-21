@@ -51,6 +51,7 @@ interface Customer {
     telefone: string | null
     cpf_cnpj: string | null
     nascimento: string | null
+    whatsapp_opt_in: boolean
     totalPurchases: number
     totalOrders: number
 }
@@ -61,6 +62,7 @@ type CustomerRow = {
     telefone: string | null
     cpf_cnpj: string | null
     nascimento: string | null
+    whatsapp_opt_in: boolean
 }
 
 type OrdemServicoRow = {
@@ -92,7 +94,7 @@ export default function Page() {
             const [customersRes, ordersRes] = await Promise.all([
                 supabase
                     .from('clientes')
-                    .select('id, nome, telefone, cpf_cnpj, nascimento')
+                    .select('id, nome, telefone, cpf_cnpj, nascimento, whatsapp_opt_in')
                     .order('nome', { ascending: true }),
 
                 supabase
@@ -131,6 +133,7 @@ export default function Page() {
                 telefone: customer.telefone,
                 cpf_cnpj: customer.cpf_cnpj,
                 nascimento: customer.nascimento,
+                whatsapp_opt_in: Boolean(customer.whatsapp_opt_in),
                 totalPurchases: financialByCustomer[customer.id]?.totalPurchases ?? 0,
                 totalOrders: financialByCustomer[customer.id]?.totalOrders ?? 0,
             }))
@@ -415,6 +418,12 @@ export default function Page() {
                                                         {formatCpfCnpj(customer.cpf_cnpj)}
                                                     </div>
                                                 )}
+
+                                                <div className="text-xs">
+                                                    {customer.whatsapp_opt_in
+                                                        ? 'WhatsApp autorizado'
+                                                        : 'WhatsApp não autorizado'}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

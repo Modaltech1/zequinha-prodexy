@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from '@prodexy/ui'
 import { Users, ClipboardList, Clock, CheckCircle2, DollarSign, TrendingUp } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
+import { formatOsNumber } from '@/lib/format-os-number'
 
 type SummaryStats = {
     osHoje: number
@@ -294,7 +295,7 @@ export default function Page() {
                     .slice(0, 5)
                     .map((os) => ({
                         id: String(os.id),
-                        numero: String(os.numero ?? os.id),
+                        numero: formatOsNumber(os.numero != null ? String(os.numero) : null, String(os.id)),
                         customerName:
                             os.cliente_id != null
                                 ? clienteMap[String(os.cliente_id)] || `Cliente #${os.cliente_id}`
@@ -310,7 +311,7 @@ export default function Page() {
                     .slice(0, 5)
                     .map((os) => ({
                         id: String(os.id),
-                        numero: String(os.numero ?? os.id),
+                        numero: formatOsNumber(os.numero != null ? String(os.numero) : null, String(os.id)),
                         customerName:
                             os.cliente_id != null
                                 ? clienteMap[String(os.cliente_id)] || `Cliente #${os.cliente_id}`
