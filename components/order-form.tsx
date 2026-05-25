@@ -21,6 +21,8 @@ type ClienteOption = {
   cpf_cnpj?: string | null
   telefone?: string | null
   email?: string | null
+  cidade?: string | null
+  bairro?: string | null
   nascimento?: string | null
   whatsapp_opt_in?: boolean | null
 }
@@ -314,6 +316,8 @@ export function OrderForm({
   const [newClientCpf, setNewClientCpf] = useState('')
   const [newClientPhone, setNewClientPhone] = useState('')
   const [newClientEmail, setNewClientEmail] = useState('')
+  const [newClientCity, setNewClientCity] = useState('')
+  const [newClientDistrict, setNewClientDistrict] = useState('')
   const [newClientBirth, setNewClientBirth] = useState('')
   const [newClientWhatsappOptIn, setNewClientWhatsappOptIn] = useState(true)
 
@@ -345,7 +349,7 @@ export function OrderForm({
 
   async function loadBaseData(selectedClienteId?: string | null) {
     const [clientesRes, servicosRes, colaboradoresRes] = await Promise.all([
-      supabase.from('clientes').select('id, nome, cpf_cnpj, telefone, email, nascimento, whatsapp_opt_in').order('nome', { ascending: true }),
+      supabase.from('clientes').select('id, nome, cpf_cnpj, telefone, email, cidade, bairro, nascimento, whatsapp_opt_in').order('nome', { ascending: true }),
       supabase.from('servicos').select('id, nome, is_periodico, periodicidade_meses').order('nome', { ascending: true }),
       supabase.from('perfis').select('id,nome').eq('papel', 'colaborador').eq('ativo', true).order('nome', { ascending: true }),
     ])
@@ -359,7 +363,7 @@ export function OrderForm({
     if (selectedClienteId && !clientesList.some((cliente) => cliente.id === selectedClienteId)) {
       const { data: selectedCliente, error: selectedClienteError } = await supabase
         .from('clientes')
-        .select('id, nome, cpf_cnpj, telefone, email, nascimento, whatsapp_opt_in')
+        .select('id, nome, cpf_cnpj, telefone, email, cidade, bairro, nascimento, whatsapp_opt_in')
         .eq('id', selectedClienteId)
         .maybeSingle()
 
@@ -466,6 +470,8 @@ export function OrderForm({
       setNewClientCpf('')
       setNewClientPhone('')
       setNewClientEmail('')
+      setNewClientCity('')
+      setNewClientDistrict('')
       setNewClientBirth('')
       setNewClientWhatsappOptIn(true)
       setVeiculoId('')
@@ -515,7 +521,7 @@ export function OrderForm({
     const filtered = (!term && !digits
       ? clientes.slice(0, 30)
       : clientes.filter((cliente) => {
-        const searchable = [cliente.nome || '', cliente.telefone || '', cliente.cpf_cnpj || '', cliente.email || '']
+        const searchable = [cliente.nome || '', cliente.telefone || '', cliente.cpf_cnpj || '', cliente.email || '', cliente.cidade || '', cliente.bairro || '']
           .join(' ')
           .toLowerCase()
         const docDigits = normalizeDigits(cliente.cpf_cnpj || '')
@@ -650,7 +656,7 @@ export function OrderForm({
       if (!cliente) {
         const { data, error } = await supabase
           .from('clientes')
-          .select('id, nome, cpf_cnpj, telefone, email, nascimento, whatsapp_opt_in')
+          .select('id, nome, cpf_cnpj, telefone, email, cidade, bairro, nascimento, whatsapp_opt_in')
           .eq('id', clienteId)
           .maybeSingle()
 
@@ -674,10 +680,12 @@ export function OrderForm({
         cpf_cnpj: newClientCpf.trim() || null,
         telefone: newClientPhone.trim() || null,
         email: newClientEmail.trim() || null,
+        cidade: newClientCity.trim() || null,
+        bairro: newClientDistrict.trim() || null,
         nascimento: newClientBirth || null,
         whatsapp_opt_in: newClientWhatsappOptIn,
       })
-      .select('id, nome, cpf_cnpj, telefone, email, nascimento, whatsapp_opt_in')
+      .select('id, nome, cpf_cnpj, telefone, email, cidade, bairro, nascimento, whatsapp_opt_in')
       .single()
 
     if (error) throw error
@@ -1175,6 +1183,14 @@ export function OrderForm({
               <div className="space-y-2">
                 <Label htmlFor="novo-cliente-email">Email</Label>
                 <Input id="novo-cliente-email" type="email" value={newClientEmail} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewClientEmail(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="novo-cliente-cidade">Cidade</Label>
+                <Input id="novo-cliente-cidade" value={newClientCity} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewClientCity(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="novo-cliente-bairro">Bairro</Label>
+                <Input id="novo-cliente-bairro" value={newClientDistrict} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewClientDistrict(e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="novo-cliente-nascimento">Nascimento</Label>

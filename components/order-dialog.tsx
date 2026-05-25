@@ -27,6 +27,8 @@ export type ClienteOption = {
   cpf_cnpj?: string | null
   telefone?: string | null
   email?: string | null
+  cidade?: string | null
+  bairro?: string | null
   nascimento?: string | null
 }
 
@@ -160,6 +162,8 @@ export function OrderDialog({ open, onOpenChange, order, onSaved }: Props) {
   const [newClientCpf, setNewClientCpf] = useState('')
   const [newClientPhone, setNewClientPhone] = useState('')
   const [newClientEmail, setNewClientEmail] = useState('')
+  const [newClientCity, setNewClientCity] = useState('')
+  const [newClientDistrict, setNewClientDistrict] = useState('')
   const [newClientBirth, setNewClientBirth] = useState('')
 
   const [veiculoId, setVeiculoId] = useState('')
@@ -186,7 +190,7 @@ export function OrderDialog({ open, onOpenChange, order, onSaved }: Props) {
 
   async function loadBaseData() {
     const [clientesRes, servicosRes] = await Promise.all([
-      supabase.from('clientes').select('id, nome, cpf_cnpj, telefone, email, nascimento').order('nome', { ascending: true }),
+      supabase.from('clientes').select('id, nome, cpf_cnpj, telefone, email, cidade, bairro, nascimento').order('nome', { ascending: true }),
       supabase.from('servicos').select('id, nome, is_periodico, periodicidade_meses').order('nome', { ascending: true }),
     ])
 
@@ -284,6 +288,8 @@ export function OrderDialog({ open, onOpenChange, order, onSaved }: Props) {
       setNewClientCpf('')
       setNewClientPhone('')
       setNewClientEmail('')
+      setNewClientCity('')
+      setNewClientDistrict('')
       setNewClientBirth('')
       setVeiculoId('')
       setIsNovoVeiculo(true)
@@ -316,7 +322,7 @@ export function OrderDialog({ open, onOpenChange, order, onSaved }: Props) {
     const digits = normalizeDigits(clienteSearch)
     if (!term && !digits) return clientes.slice(0, 30)
     return clientes.filter((cliente) => {
-      const searchable = [cliente.nome || '', cliente.telefone || '', cliente.cpf_cnpj || '', cliente.email || '']
+      const searchable = [cliente.nome || '', cliente.telefone || '', cliente.cpf_cnpj || '', cliente.email || '', cliente.cidade || '', cliente.bairro || '']
         .join(' ')
         .toLowerCase()
       const docDigits = normalizeDigits(cliente.cpf_cnpj || '')
@@ -431,9 +437,11 @@ export function OrderDialog({ open, onOpenChange, order, onSaved }: Props) {
         cpf_cnpj: newClientCpf.trim() || null,
         telefone: newClientPhone.trim() || null,
         email: newClientEmail.trim() || null,
+        cidade: newClientCity.trim() || null,
+        bairro: newClientDistrict.trim() || null,
         nascimento: newClientBirth || null,
       })
-      .select('id, nome, cpf_cnpj, telefone, email, nascimento')
+      .select('id, nome, cpf_cnpj, telefone, email, cidade, bairro, nascimento')
       .single()
 
     if (error) throw error
@@ -824,6 +832,14 @@ export function OrderDialog({ open, onOpenChange, order, onSaved }: Props) {
                 <div className="space-y-2">
                   <Label htmlFor="novo-cliente-email">Email</Label>
                   <Input id="novo-cliente-email" type="email" value={newClientEmail} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewClientEmail(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="novo-cliente-cidade">Cidade</Label>
+                  <Input id="novo-cliente-cidade" value={newClientCity} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewClientCity(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="novo-cliente-bairro">Bairro</Label>
+                  <Input id="novo-cliente-bairro" value={newClientDistrict} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewClientDistrict(e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="novo-cliente-nascimento">Nascimento</Label>

@@ -20,6 +20,7 @@ import {
     Pencil,
     Trash2,
     Phone,
+    MapPin,
     UserCheck,
     Filter,
     ChevronLeft,
@@ -50,6 +51,8 @@ interface Customer {
     nome: string
     telefone: string | null
     cpf_cnpj: string | null
+    cidade: string | null
+    bairro: string | null
     nascimento: string | null
     whatsapp_opt_in: boolean
     totalPurchases: number
@@ -61,6 +64,8 @@ type CustomerRow = {
     nome: string
     telefone: string | null
     cpf_cnpj: string | null
+    cidade: string | null
+    bairro: string | null
     nascimento: string | null
     whatsapp_opt_in: boolean
 }
@@ -94,7 +99,7 @@ export default function Page() {
             const [customersRes, ordersRes] = await Promise.all([
                 supabase
                     .from('clientes')
-                    .select('id, nome, telefone, cpf_cnpj, nascimento, whatsapp_opt_in')
+                    .select('id, nome, telefone, cpf_cnpj, cidade, bairro, nascimento, whatsapp_opt_in')
                     .order('nome', { ascending: true }),
 
                 supabase
@@ -132,6 +137,8 @@ export default function Page() {
                 nome: customer.nome,
                 telefone: customer.telefone,
                 cpf_cnpj: customer.cpf_cnpj,
+                cidade: customer.cidade,
+                bairro: customer.bairro,
                 nascimento: customer.nascimento,
                 whatsapp_opt_in: Boolean(customer.whatsapp_opt_in),
                 totalPurchases: financialByCustomer[customer.id]?.totalPurchases ?? 0,
@@ -163,6 +170,8 @@ export default function Page() {
                     customer.nome || '',
                     customer.telefone || '',
                     customer.cpf_cnpj || '',
+                    customer.cidade || '',
+                    customer.bairro || '',
                     formatBirthDate(customer.nascimento),
                 ]
                     .join(' ')
@@ -419,6 +428,13 @@ export default function Page() {
                                                     </div>
                                                 )}
 
+                                                {(customer.cidade || customer.bairro) && (
+                                                    <div className="flex items-center gap-1.5">
+                                                        <MapPin className="h-3.5 w-3.5" />
+                                                        {formatAddress(customer)}
+                                                    </div>
+                                                )}
+
                                                 <div className="text-xs">
                                                     {customer.whatsapp_opt_in
                                                         ? 'WhatsApp autorizado'
@@ -570,6 +586,10 @@ function formatCpfCnpj(value: string | null) {
     }
 
     return value
+}
+
+function formatAddress(customer: { cidade: string | null; bairro: string | null }) {
+    return [customer.bairro, customer.cidade].filter(Boolean).join(' - ')
 }
 
 function formatCurrency(value: number) {

@@ -20,6 +20,8 @@ interface Customer {
     nome: string
     telefone: string | null
     cpf_cnpj: string | null
+    cidade: string | null
+    bairro: string | null
     nascimento: string | null
     whatsapp_opt_in?: boolean
     totalPurchases?: number
@@ -43,6 +45,8 @@ export function CustomerDialog({
         nome: '',
         telefone: '',
         cpf_cnpj: '',
+        cidade: '',
+        bairro: '',
         nascimento: '',
         whatsapp_opt_in: true,
     })
@@ -56,6 +60,8 @@ export function CustomerDialog({
                 nome: customer.nome ?? '',
                 telefone: customer.telefone ?? '',
                 cpf_cnpj: customer.cpf_cnpj ?? '',
+                cidade: customer.cidade ?? '',
+                bairro: customer.bairro ?? '',
                 nascimento: customer.nascimento ?? '',
                 whatsapp_opt_in: Boolean(customer.whatsapp_opt_in),
             })
@@ -64,6 +70,8 @@ export function CustomerDialog({
                 nome: '',
                 telefone: '',
                 cpf_cnpj: '',
+                cidade: '',
+                bairro: '',
                 nascimento: '',
                 whatsapp_opt_in: true,
             })
@@ -82,6 +90,8 @@ export function CustomerDialog({
                 nome: formData.nome.trim(),
                 telefone: formData.telefone.trim() || null,
                 cpf_cnpj: formData.cpf_cnpj.trim() || null,
+                cidade: formData.cidade.trim() || null,
+                bairro: formData.bairro.trim() || null,
                 nascimento: formData.nascimento || null,
                 whatsapp_opt_in: formData.whatsapp_opt_in,
             }
@@ -160,6 +170,28 @@ export function CustomerDialog({
                                 placeholder="123.456.789-00"
                                 value={formData.cpf_cnpj}
                                 onChange={(e) => setFormData({ ...formData, cpf_cnpj: e.target.value })}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                            <Label htmlFor="cidade">Cidade</Label>
+                            <Input
+                                id="cidade"
+                                placeholder="Ex.: Vila Velha"
+                                value={formData.cidade}
+                                onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="bairro">Bairro</Label>
+                            <Input
+                                id="bairro"
+                                placeholder="Ex.: Centro"
+                                value={formData.bairro}
+                                onChange={(e) => setFormData({ ...formData, bairro: e.target.value })}
                             />
                         </div>
                     </div>
