@@ -47,6 +47,18 @@ function formatDate(value: string | null | undefined) {
   return new Date(value).toLocaleString('pt-BR')
 }
 
+function formatStatus(status: string | null | undefined) {
+  const labels: Record<string, string> = {
+    agendada: 'Agendada',
+    aberta: 'Aberta',
+    em_andamento: 'Em andamento',
+    finalizada: 'Finalizada',
+    cancelada: 'Cancelada',
+  }
+
+  return status ? labels[status] || status : '-'
+}
+
 function getWorkshopData(order: PrintableOrder) {
   return {
     nome: process.env.NEXT_PUBLIC_OFICINA_NOME || 'Zequinha Pneus',
@@ -145,7 +157,7 @@ export function buildOrderPrintHtml(order: PrintableOrder, logoUrl?: string) {
       <div class="os-title">
         <h2>Ordem de Serviço</h2>
         <div><strong>Nº:</strong> ${escapeHtml(order.numero)}</div>
-        <div><strong>Status:</strong> ${escapeHtml(order.status)}</div>
+        <div><strong>Status:</strong> ${escapeHtml(formatStatus(order.status))}</div>
         <div><strong>Responsável:</strong> ${escapeHtml(order.responsavel_nome || '-')}</div>
         <div><strong>Emitida em:</strong> ${escapeHtml(formatDate(order.atualizado_em || order.criado_em))}</div>
       </div>

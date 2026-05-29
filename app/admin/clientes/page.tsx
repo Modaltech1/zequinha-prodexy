@@ -23,12 +23,11 @@ import {
     MapPin,
     UserCheck,
     Filter,
-    ChevronLeft,
-    ChevronRight,
     Cake,
     ClipboardCheck,
 } from 'lucide-react'
 import { CustomerDialog } from '@/components/customer-dialog'
+import { ListPagination } from '@/components/list-pagination'
 import { supabase } from '@/lib/supabaseClient'
 
 type BirthdayFilter =
@@ -240,10 +239,14 @@ export default function Page() {
         return filteredCustomers.filter((customer) => customer.totalOrders > 0).length
     }, [filteredCustomers])
 
-    const totalPages = Math.ceil(filteredCustomers.length / itemsPerPage) || 1
     const startIndex = (currentPage - 1) * itemsPerPage
     const endIndex = startIndex + itemsPerPage
     const paginatedCustomers = filteredCustomers.slice(startIndex, endIndex)
+
+    useEffect(() => {
+        const nextTotalPages = Math.ceil(filteredCustomers.length / itemsPerPage) || 1
+        if (currentPage > nextTotalPages) setCurrentPage(nextTotalPages)
+    }, [currentPage, filteredCustomers.length])
 
     const handleEdit = (customer: Customer) => {
         setEditingCustomer(customer)
@@ -478,61 +481,13 @@ export default function Page() {
                         })}
                     </div>
 
-                    {totalPages > 1 && (
-                        <div className="mt-4 flex items-center justify-between border-t pt-4">
-                            <p className="text-sm text-muted-foreground">
-                                Mostrando {startIndex + 1} a {Math.min(endIndex, filteredCustomers.length)} de {filteredCustomers.length} clientes
-                            </p>
-
-                            <div className="flex gap-2">
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-                                    disabled={currentPage === 1}
-                                >
-                                    <ChevronLeft className="h-4 w-4" />
-                                </Button>
-
-                                <div className="flex items-center gap-1">
-                                    {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                                        let page
-
-                                        if (totalPages <= 5) {
-                                            page = i + 1
-                                        } else if (currentPage <= 3) {
-                                            page = i + 1
-                                        } else if (currentPage >= totalPages - 2) {
-                                            page = totalPages - 4 + i
-                                        } else {
-                                            page = currentPage - 2 + i
-                                        }
-
-                                        return (
-                                            <Button
-                                                key={page}
-                                                variant={currentPage === page ? 'default' : 'outline'}
-                                                size="sm"
-                                                onClick={() => setCurrentPage(page)}
-                                                className="h-8 w-8 p-0"
-                                            >
-                                                {page}
-                                            </Button>
-                                        )
-                                    })}
-                                </div>
-
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
-                                    disabled={currentPage === totalPages}
-                                >
-                                    <ChevronRight className="h-4 w-4" />
-                                </Button>
-                            </div>
-                        </div>
-                    )}
+                    <ListPagination
+                        currentPage={currentPage}
+                        totalItems={filteredCustomers.length}
+                        itemsPerPage={itemsPerPage}
+                        itemLabel="clientes"
+                        onPageChange={setCurrentPage}
+                    />
                 </CardContent>
             </Card>
 

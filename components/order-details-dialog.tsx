@@ -44,7 +44,7 @@ export function OrderDetailsDialog({
                 <DialogDescription>Detalhes da ordem de serviço.</DialogDescription>
               </div>
               <Badge variant={order.status === 'finalizada' ? 'default' : 'secondary'}>
-                {order.status}
+                {formatStatus(order.status)}
               </Badge>
             </div>
             <Button type="button" variant="outline" className="gap-2" onClick={() => printOrder(order)}>
@@ -152,4 +152,16 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       {children}
     </div>
   )
+}
+
+function formatStatus(status: string | null) {
+  const labels: Record<string, string> = {
+    agendada: 'Agendada',
+    aberta: 'Aberta',
+    em_andamento: 'Em andamento',
+    finalizada: 'Finalizada',
+    cancelada: 'Cancelada',
+  }
+
+  return status ? labels[status] || status : 'Sem status'
 }

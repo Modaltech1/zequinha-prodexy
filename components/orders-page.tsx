@@ -23,6 +23,7 @@ import {
 } from '@prodexy/ui'
 import { Search, Wrench, Car, Plus, Pencil, Trash2, Camera, FileText, Printer, Filter, MoreHorizontal, Eye } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
+import { ListPagination } from '@/components/list-pagination'
 import { OrderDetailsDialog, type OrdemServicoDetails } from '@/components/order-details-dialog'
 import { printOrder } from '@/components/order-print'
 import { formatOsNumber } from '@/lib/format-os-number'
@@ -111,6 +112,12 @@ type OrdersPageProps = {
   collaboratorMode?: boolean
 }
 
+type StatusFilter = 'ativas' | 'todos' | 'agendada' | 'aberta' | 'em_andamento' | 'finalizada' | 'cancelada'
+
+const ACTIVE_ORDER_STATUSES = ['agendada', 'aberta', 'em_andamento']
+const ORDER_SELECT =
+  'id,numero,cliente_id,veiculo_id,veiculo_placa,veiculo_marca,veiculo_modelo,veiculo_ano,veiculo_cor,veiculo_tem_seguro,valor_total,valor_final,status,observacoes,criado_em,atualizado_em,km_entrada,mao_de_obra,acrescimos,responsavel_id,forma_pagamento' as const
+
 export function OrdersPage({
   title = 'Ordens de Serviço',
   description = 'Cadastre, acompanhe e consulte as ordens de serviço da operação.',
@@ -127,35 +134,33 @@ export function OrdersPage({
   const [collaborators, setCollaborators] = useState<Record<string, Collaborator>>({})
 
   const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'todos' | 'aberta' | 'em_andamento' | 'finalizada' | 'cancelada'>('todos')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ativas')
   const [loading, setLoading] = useState(true)
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
 
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState<OrdemServicoDetails | null>(null)
 
   const basePath = collaboratorMode ? '/colaborador/ordens' : '/admin/ordens'
 
-  async function loadOrders() {
+  async function loadOrders(filter: StatusFilter = statusFilter) {
     setLoading(true)
 
-    const [ordensRes, clientesRes, veiculosRes, ordemServicosRes, servicosRes, fotosRes, diagnosticosRes, colaboradoresRes] = await Promise.all([
-      supabase.from('ordens_de_servico').select('*').order('criado_em', { ascending: false }),
-      supabase.from('clientes').select('id,nome,telefone,cpf_cnpj'),
-      supabase.from('veiculos').select('id,cliente_id,placa,marca,modelo,ano,cor,tem_seguro'),
-      supabase.from('ordem_servicos').select('id,os_id,servico_id,valor,quantidade,codigo_peca,observacao'),
-      supabase.from('servicos').select('id,nome,is_periodico,periodicidade_meses'),
-      supabase.from('ordem_fotos').select('id,os_id,foto_url,criado_em').order('criado_em', { ascending: true }),
-      supabase.from('ordem_diagnosticos').select('id,os_id,descricao,criado_em').order('criado_em', { ascending: true }),
+    let ordensQuery = supabase.from('ordens_de_servico').select(ORDER_SELECT).order('criado_em', { ascending: false })
+
+    if (filter === 'ativas') {
+      ordensQuery = ordensQuery.in('status', ACTIVE_ORDER_STATUSES)
+    } else if (filter !== 'todos') {
+      ordensQuery = ordensQuery.eq('status', filter)
+    }
+
+    const [ordensRes, colaboradoresRes] = await Promise.all([
+      ordensQuery,
       supabase.from('perfis').select('id,nome').eq('papel', 'colaborador'),
     ])
 
     if (ordensRes.error) console.error(ordensRes.error)
-    if (clientesRes.error) console.error(clientesRes.error)
-    if (veiculosRes.error) console.error(veiculosRes.error)
-    if (ordemServicosRes.error) console.error(ordemServicosRes.error)
-    if (servicosRes.error) console.error(servicosRes.error)
-    if (fotosRes.error) console.error(fotosRes.error)
-    if (diagnosticosRes.error) console.error(diagnosticosRes.error)
     if (colaboradoresRes.error) console.error(colaboradoresRes.error)
 
     const ordens = ((ordensRes.data as OrdemRow[]) || []).map((row) => ({
@@ -165,6 +170,53 @@ export function OrdersPage({
     }))
 
     setOrders(ordens)
+
+    const orderIds = ordens.map((order) => order.id)
+    const customerIds = Array.from(new Set(ordens.map((order) => order.cliente_id).filter(Boolean))) as string[]
+    const vehicleIds = Array.from(new Set(ordens.map((order) => order.veiculo_id).filter(Boolean))) as string[]
+
+    if (orderIds.length === 0) {
+      setCustomers({})
+      setVehicles({})
+      setServiceRowsByOrder({})
+      setServices({})
+      setPhotosByOrder({})
+      setDiagnosticsByOrder({})
+      setCollaborators(
+        (((colaboradoresRes.data as Collaborator[]) || []).reduce<Record<string, Collaborator>>((acc, item) => {
+          acc[item.id] = item
+          return acc
+        }, {}))
+      )
+      setLoading(false)
+      return
+    }
+
+    const [clientesRes, veiculosRes, ordemServicosRes, fotosRes, diagnosticosRes] = await Promise.all([
+      customerIds.length > 0
+        ? supabase.from('clientes').select('id,nome,telefone,cpf_cnpj').in('id', customerIds)
+        : Promise.resolve({ data: [], error: null }),
+      vehicleIds.length > 0
+        ? supabase.from('veiculos').select('id,cliente_id,placa,marca,modelo,ano,cor,tem_seguro').in('id', vehicleIds)
+        : Promise.resolve({ data: [], error: null }),
+      supabase.from('ordem_servicos').select('id,os_id,servico_id,valor,quantidade,codigo_peca,observacao').in('os_id', orderIds),
+      supabase.from('ordem_fotos').select('id,os_id,foto_url,criado_em').in('os_id', orderIds).order('criado_em', { ascending: true }),
+      supabase.from('ordem_diagnosticos').select('id,os_id,descricao,criado_em').in('os_id', orderIds).order('criado_em', { ascending: true }),
+    ])
+
+    if (clientesRes.error) console.error(clientesRes.error)
+    if (veiculosRes.error) console.error(veiculosRes.error)
+    if (ordemServicosRes.error) console.error(ordemServicosRes.error)
+    if (fotosRes.error) console.error(fotosRes.error)
+    if (diagnosticosRes.error) console.error(diagnosticosRes.error)
+
+    const ordemServicos = (ordemServicosRes.data as OrdemServicoItemRow[]) || []
+    const serviceIds = Array.from(new Set(ordemServicos.map((item) => item.servico_id).filter(Boolean)))
+    const servicosRes = serviceIds.length > 0
+      ? await supabase.from('servicos').select('id,nome,is_periodico,periodicidade_meses').in('id', serviceIds)
+      : { data: [], error: null }
+
+    if (servicosRes.error) console.error(servicosRes.error)
 
     setCustomers(
       (((clientesRes.data as Cliente[]) || []).reduce<Record<string, Cliente>>((acc, item) => {
@@ -181,7 +233,7 @@ export function OrdersPage({
     )
 
     setServiceRowsByOrder(
-      (((ordemServicosRes.data as OrdemServicoItemRow[]) || []).reduce<Record<string, OrdemServicoItemRow[]>>((acc, item) => {
+      (ordemServicos.reduce<Record<string, OrdemServicoItemRow[]>>((acc, item) => {
         if (!acc[item.os_id]) acc[item.os_id] = []
         acc[item.os_id].push({ ...item, valor: Number(item.valor || 0) })
         return acc
@@ -222,8 +274,8 @@ export function OrdersPage({
   }
 
   useEffect(() => {
-    loadOrders()
-  }, [])
+    loadOrders(statusFilter)
+  }, [statusFilter])
 
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
@@ -241,14 +293,28 @@ export function OrdersPage({
       ].join(' ').toLowerCase()
 
       const matchesSearch = searchable.includes(searchTerm.toLowerCase())
-      const matchesStatus = statusFilter === 'todos' ? true : (order.status || '') === statusFilter
+      const matchesStatus =
+        statusFilter === 'todos'
+          ? true
+          : statusFilter === 'ativas'
+            ? ACTIVE_ORDER_STATUSES.includes(order.status || '')
+            : (order.status || '') === statusFilter
       return matchesSearch && matchesStatus
     })
   }, [orders, customers, vehicles, searchTerm, statusFilter])
 
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedOrders = filteredOrders.slice(startIndex, endIndex)
+
+  useEffect(() => {
+    const nextTotalPages = Math.ceil(filteredOrders.length / itemsPerPage) || 1
+    if (currentPage > nextTotalPages) setCurrentPage(nextTotalPages)
+  }, [currentPage, filteredOrders.length])
+
   const stats = useMemo(() => {
     const total = orders.length
-    const open = orders.filter((order) => ['aberta', 'em_andamento'].includes(order.status || '')).length
+    const open = orders.filter((order) => ACTIVE_ORDER_STATUSES.includes(order.status || '')).length
     const done = orders.filter((order) => order.status === 'finalizada').length
     const value = orders
       .filter((order) => order.status === 'finalizada')
@@ -353,8 +419,8 @@ export function OrdersPage({
 
       {!collaboratorMode && (
         <div className="grid gap-4 md:grid-cols-4">
-          <SummaryCard title="Total de OS" value={String(stats.total)} />
-          <SummaryCard title="Em andamento" value={String(stats.open)} />
+          <SummaryCard title="OS no filtro" value={String(stats.total)} />
+          <SummaryCard title="Ativas" value={String(stats.open)} />
           <SummaryCard title="Finalizadas" value={String(stats.done)} />
           <SummaryCard title="Faturamento finalizado" value={`R$ ${stats.value.toFixed(2)}`} />
         </div>
@@ -367,24 +433,35 @@ export function OrdersPage({
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={searchTerm}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                  setSearchTerm(e.target.value)
+                  setCurrentPage(1)
+                }}
                 className="pl-9"
                 placeholder="Buscar por número, CPF, cliente, placa, marca ou modelo..."
               />
             </div>
 
             <div className="flex flex-col gap-2 sm:flex-row">
-              <Select value={statusFilter} onValueChange={(value: string) => setStatusFilter(value as any)}>
-                <SelectTrigger className="w-full sm:w-[220px]">
+              <Select
+                value={statusFilter}
+                onValueChange={(value: string) => {
+                  setStatusFilter(value as StatusFilter)
+                  setCurrentPage(1)
+                }}
+              >
+                <SelectTrigger className="w-full sm:w-[280px]">
                   <Filter className="mr-2 h-4 w-4" />
                   <SelectValue placeholder="Filtrar por status..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="todos">Todos os status</SelectItem>
+                  <SelectItem value="ativas">Agendadas, abertas e em andamento</SelectItem>
+                  <SelectItem value="agendada">Agendadas</SelectItem>
                   <SelectItem value="aberta">Abertas</SelectItem>
                   <SelectItem value="em_andamento">Em andamento</SelectItem>
                   <SelectItem value="finalizada">Finalizadas</SelectItem>
                   <SelectItem value="cancelada">Canceladas</SelectItem>
+                  <SelectItem value="todos">Todos os status</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -395,7 +472,7 @@ export function OrdersPage({
           {loading && <p className="text-sm text-muted-foreground">Carregando ordens de serviço...</p>}
           {!loading && filteredOrders.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma ordem de serviço encontrada.</p>}
 
-          {filteredOrders.map((order) => {
+          {paginatedOrders.map((order) => {
             const customer = order.cliente_id ? customers[order.cliente_id] : undefined
             const vehicle = order.veiculo_id ? vehicles[order.veiculo_id] : undefined
             const vehicleLabel = `${vehicle?.marca || order.veiculo_marca || '-'} ${vehicle?.modelo || order.veiculo_modelo || ''} ${(vehicle?.placa || order.veiculo_placa) ? `• ${vehicle?.placa || order.veiculo_placa}` : ''}`
@@ -411,7 +488,7 @@ export function OrdersPage({
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="font-semibold">OS #{formatOsNumber(order.numero, order.id)}</p>
                       <Badge variant={order.status === 'finalizada' ? 'default' : 'secondary'}>
-                        {order.status || 'Sem status'}
+                        {formatStatus(order.status)}
                       </Badge>
                     </div>
 
@@ -479,6 +556,14 @@ export function OrdersPage({
               </div>
             )
           })}
+
+          <ListPagination
+            currentPage={currentPage}
+            totalItems={filteredOrders.length}
+            itemsPerPage={itemsPerPage}
+            itemLabel="ordens"
+            onPageChange={setCurrentPage}
+          />
         </CardContent>
       </Card>
 
@@ -507,4 +592,16 @@ function InfoLine({ icon: Icon, text }: { icon: any; text: string }) {
       <span>{text}</span>
     </div>
   )
+}
+
+function formatStatus(status: string | null) {
+  const labels: Record<string, string> = {
+    agendada: 'Agendada',
+    aberta: 'Aberta',
+    em_andamento: 'Em andamento',
+    finalizada: 'Finalizada',
+    cancelada: 'Cancelada',
+  }
+
+  return status ? labels[status] || status : 'Sem status'
 }

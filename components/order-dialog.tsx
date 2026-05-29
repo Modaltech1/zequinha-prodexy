@@ -745,6 +745,7 @@ export function OrderDialog({ open, onOpenChange, order, onSaved }: Props) {
                   <SelectValue placeholder="Selecione o status" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="agendada">Agendada</SelectItem>
                   <SelectItem value="aberta">Aberta</SelectItem>
                   <SelectItem value="em_andamento">Em andamento</SelectItem>
                   <SelectItem value="finalizada">Finalizada</SelectItem>
