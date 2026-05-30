@@ -21,7 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@prodexy/ui'
-import { Search, Wrench, Car, Plus, Pencil, Trash2, Camera, FileText, Printer, Filter, MoreHorizontal, Eye } from 'lucide-react'
+import { Search, Wrench, Car, Plus, Pencil, Trash2, Camera, FileText, Printer, Filter, MoreHorizontal, Eye, Package } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
 import { ListPagination } from '@/components/list-pagination'
 import { OrderDetailsDialog, type OrdemServicoDetails } from '@/components/order-details-dialog'
@@ -69,11 +69,29 @@ type OrdemServicoItemRow = {
   observacao?: string | null
 }
 
+type OrdemProdutoItemRow = {
+  id: string
+  os_id: string
+  produto_id: string
+  quantidade?: number | null
+  valor_unitario?: number | null
+  codigo_produto?: string | null
+  observacao?: string | null
+}
+
 type Servico = {
   id: string
   nome: string
   is_periodico?: boolean | null
   periodicidade_meses?: number | null
+}
+
+type Produto = {
+  id: string
+  nome: string
+  marca_modelo?: string | null
+  codigo?: string | null
+  quantidade_estoque?: number | null
 }
 
 type OrdemFoto = {
@@ -129,6 +147,8 @@ export function OrdersPage({
   const [vehicles, setVehicles] = useState<Record<string, VeiculoRow>>({})
   const [serviceRowsByOrder, setServiceRowsByOrder] = useState<Record<string, OrdemServicoItemRow[]>>({})
   const [services, setServices] = useState<Record<string, Servico>>({})
+  const [productRowsByOrder, setProductRowsByOrder] = useState<Record<string, OrdemProdutoItemRow[]>>({})
+  const [products, setProducts] = useState<Record<string, Produto>>({})
   const [photosByOrder, setPhotosByOrder] = useState<Record<string, OrdemFoto[]>>({})
   const [diagnosticsByOrder, setDiagnosticsByOrder] = useState<Record<string, OrdemDiagnostico[]>>({})
   const [collaborators, setCollaborators] = useState<Record<string, Collaborator>>({})
@@ -180,6 +200,8 @@ export function OrdersPage({
       setVehicles({})
       setServiceRowsByOrder({})
       setServices({})
+      setProductRowsByOrder({})
+      setProducts({})
       setPhotosByOrder({})
       setDiagnosticsByOrder({})
       setCollaborators(
@@ -192,7 +214,7 @@ export function OrdersPage({
       return
     }
 
-    const [clientesRes, veiculosRes, ordemServicosRes, fotosRes, diagnosticosRes] = await Promise.all([
+    const [clientesRes, veiculosRes, ordemServicosRes, ordemProdutosRes, fotosRes, diagnosticosRes] = await Promise.all([
       customerIds.length > 0
         ? supabase.from('clientes').select('id,nome,telefone,cpf_cnpj').in('id', customerIds)
         : Promise.resolve({ data: [], error: null }),
@@ -200,6 +222,7 @@ export function OrdersPage({
         ? supabase.from('veiculos').select('id,cliente_id,placa,marca,modelo,ano,cor,tem_seguro').in('id', vehicleIds)
         : Promise.resolve({ data: [], error: null }),
       supabase.from('ordem_servicos').select('id,os_id,servico_id,valor,quantidade,codigo_peca,observacao').in('os_id', orderIds),
+      supabase.from('ordem_produtos').select('id,os_id,produto_id,quantidade,valor_unitario,codigo_produto,observacao').in('os_id', orderIds),
       supabase.from('ordem_fotos').select('id,os_id,foto_url,criado_em').in('os_id', orderIds).order('criado_em', { ascending: true }),
       supabase.from('ordem_diagnosticos').select('id,os_id,descricao,criado_em').in('os_id', orderIds).order('criado_em', { ascending: true }),
     ])
@@ -207,16 +230,23 @@ export function OrdersPage({
     if (clientesRes.error) console.error(clientesRes.error)
     if (veiculosRes.error) console.error(veiculosRes.error)
     if (ordemServicosRes.error) console.error(ordemServicosRes.error)
+    if (ordemProdutosRes.error) console.error(ordemProdutosRes.error)
     if (fotosRes.error) console.error(fotosRes.error)
     if (diagnosticosRes.error) console.error(diagnosticosRes.error)
 
     const ordemServicos = (ordemServicosRes.data as OrdemServicoItemRow[]) || []
+    const ordemProdutos = (ordemProdutosRes.data as OrdemProdutoItemRow[]) || []
     const serviceIds = Array.from(new Set(ordemServicos.map((item) => item.servico_id).filter(Boolean)))
+    const productIds = Array.from(new Set(ordemProdutos.map((item) => item.produto_id).filter(Boolean)))
     const servicosRes = serviceIds.length > 0
       ? await supabase.from('servicos').select('id,nome,is_periodico,periodicidade_meses').in('id', serviceIds)
       : { data: [], error: null }
+    const produtosRes = productIds.length > 0
+      ? await supabase.from('produtos').select('id,nome,marca_modelo,codigo,quantidade_estoque').in('id', productIds)
+      : { data: [], error: null }
 
     if (servicosRes.error) console.error(servicosRes.error)
+    if (produtosRes.error) console.error(produtosRes.error)
 
     setCustomers(
       (((clientesRes.data as Cliente[]) || []).reduce<Record<string, Cliente>>((acc, item) => {
@@ -243,6 +273,28 @@ export function OrdersPage({
     setServices(
       (((servicosRes.data as Servico[]) || []).reduce<Record<string, Servico>>((acc, item) => {
         acc[item.id] = item
+        return acc
+      }, {}))
+    )
+
+    setProductRowsByOrder(
+      (ordemProdutos.reduce<Record<string, OrdemProdutoItemRow[]>>((acc, item) => {
+        if (!acc[item.os_id]) acc[item.os_id] = []
+        acc[item.os_id].push({
+          ...item,
+          valor_unitario: Number(item.valor_unitario || 0),
+          quantidade: item.quantidade == null ? 1 : Number(item.quantidade),
+        })
+        return acc
+      }, {}))
+    )
+
+    setProducts(
+      (((produtosRes.data as Produto[]) || []).reduce<Record<string, Produto>>((acc, item) => {
+        acc[item.id] = {
+          ...item,
+          quantidade_estoque: item.quantidade_estoque == null ? 0 : Number(item.quantidade_estoque),
+        }
         return acc
       }, {}))
     )
@@ -336,6 +388,15 @@ export function OrdersPage({
       codigo_peca: item.codigo_peca || null,
       observacao: item.observacao || null,
     }))
+    const produtosDaOs = (productRowsByOrder[order.id] || []).map((item) => ({
+      id: item.id,
+      nome: products[item.produto_id]?.nome || 'Produto não identificado',
+      marca_modelo: products[item.produto_id]?.marca_modelo || null,
+      codigo: item.codigo_produto || products[item.produto_id]?.codigo || null,
+      valor_unitario: Number(item.valor_unitario || 0),
+      quantidade: item.quantidade == null ? 1 : Number(item.quantidade),
+      observacao: item.observacao || null,
+    }))
 
     return {
       id: order.id,
@@ -361,6 +422,7 @@ export function OrdersPage({
       acrescimos: Number(order.acrescimos || 0),
       forma_pagamento: order.forma_pagamento || null,
       servicos: itens,
+      produtos: produtosDaOs,
       diagnosticos: (diagnosticsByOrder[order.id] || []).map((item) => ({ id: item.id, descricao: item.descricao })),
       fotos: (photosByOrder[order.id] || []).map((foto) => ({ id: foto.id, foto_url: foto.foto_url })),
     }
@@ -371,6 +433,39 @@ export function OrdersPage({
     if (!confirmed) return
 
     const fotos = photosByOrder[order.id] || []
+    const produtosDaOs = productRowsByOrder[order.id] || []
+
+    if (produtosDaOs.length > 0) {
+      const restoreByProductId = produtosDaOs.reduce<Record<string, number>>((acc, item) => {
+        acc[item.produto_id] = (acc[item.produto_id] || 0) + Math.max(1, Number(item.quantidade || 1))
+        return acc
+      }, {})
+      const productIds = Object.keys(restoreByProductId)
+      const { data: productStocks, error: productStocksError } = await supabase
+        .from('produtos')
+        .select('id,quantidade_estoque')
+        .in('id', productIds)
+
+      if (productStocksError) {
+        console.error('Erro ao buscar estoque para restaurar produtos da OS:', productStocksError)
+        return
+      }
+
+      for (const produto of (productStocks as { id: string; quantidade_estoque: number | null }[]) || []) {
+        const { error: restoreError } = await supabase
+          .from('produtos')
+          .update({
+            quantidade_estoque: Number(produto.quantidade_estoque || 0) + (restoreByProductId[produto.id] || 0),
+            atualizado_em: new Date().toISOString(),
+          })
+          .eq('id', produto.id)
+
+        if (restoreError) {
+          console.error('Erro ao restaurar estoque ao excluir OS:', restoreError)
+          return
+        }
+      }
+    }
 
     const { error } = await supabase.from('ordens_de_servico').delete().eq('id', order.id)
     if (error) {
@@ -477,6 +572,7 @@ export function OrdersPage({
             const vehicle = order.veiculo_id ? vehicles[order.veiculo_id] : undefined
             const vehicleLabel = `${vehicle?.marca || order.veiculo_marca || '-'} ${vehicle?.modelo || order.veiculo_modelo || ''} ${(vehicle?.placa || order.veiculo_placa) ? `• ${vehicle?.placa || order.veiculo_placa}` : ''}`
             const itemCount = (serviceRowsByOrder[order.id] || []).length
+            const productsCount = (productRowsByOrder[order.id] || []).length
             const photosCount = (photosByOrder[order.id] || []).length
             const diagnosticsCount = (diagnosticsByOrder[order.id] || []).length
             const details = buildOrderDetails(order)
@@ -495,6 +591,7 @@ export function OrdersPage({
                     <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-2 xl:grid-cols-3">
                       <InfoLine icon={Car} text={vehicleLabel} />
                       <InfoLine icon={Wrench} text={`${itemCount} serviço(s)`} />
+                      <InfoLine icon={Package} text={`${productsCount} produto(s)`} />
                       <InfoLine icon={FileText} text={`${diagnosticsCount} diagnóstico(s)`} />
                       <InfoLine icon={Camera} text={`${photosCount} foto(s)`} />
                       <p><span className="font-medium text-foreground">Cliente:</span> {customer?.nome || 'Cliente não identificado'}</p>

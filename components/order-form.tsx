@@ -34,6 +34,15 @@ type ServicoOption = {
   periodicidade_meses?: number | null
 }
 
+type ProdutoOption = {
+  id: string
+  nome: string
+  marca_modelo?: string | null
+  codigo?: string | null
+  quantidade_estoque: number
+  valor_unitario: number
+}
+
 type CollaboratorOption = {
   id: string
   nome: string | null
@@ -72,6 +81,16 @@ export type OrdemServicoEdit = {
     is_periodico?: boolean | null
     periodicidade_meses?: number | null
   }[]
+  produtos?: {
+    id?: string
+    produto_id: string
+    nome: string
+    marca_modelo?: string | null
+    codigo?: string | null
+    valor_unitario?: number | null
+    quantidade?: number | null
+    observacao?: string | null
+  }[]
   diagnosticos: {
     id?: string
     descricao: string
@@ -91,6 +110,16 @@ type ServicoSelecionado = {
   observacao: string
   is_periodico?: boolean | null
   periodicidade_meses?: number | null
+}
+
+type ProdutoSelecionado = {
+  produto_id: string
+  nome: string
+  marca_modelo?: string | null
+  codigo: string
+  valor_unitario: string
+  quantidade: string
+  observacao: string
 }
 
 type DiagnosticoSelecionado = {
@@ -152,6 +181,10 @@ function parseQuantidade(value: string | number | null | undefined) {
 }
 
 function servicoLineTotal(unitValor: string | number | null | undefined, quantidade: string | number | null | undefined) {
+  return parseMoney(String(unitValor ?? '')) * parseQuantidade(quantidade)
+}
+
+function produtoLineTotal(unitValor: string | number | null | undefined, quantidade: string | number | null | undefined) {
   return parseMoney(String(unitValor ?? '')) * parseQuantidade(quantidade)
 }
 
@@ -305,6 +338,7 @@ export function OrderForm({
 
   const [clientes, setClientes] = useState<ClienteOption[]>([])
   const [servicosDisponiveis, setServicosDisponiveis] = useState<ServicoOption[]>([])
+  const [produtosDisponiveis, setProdutosDisponiveis] = useState<ProdutoOption[]>([])
   const [veiculos, setVeiculos] = useState<VeiculoOption[]>([])
   const [collaborators, setCollaborators] = useState<CollaboratorOption[]>([])
 
@@ -340,6 +374,8 @@ export function OrderForm({
 
   const [servicos, setServicos] = useState<ServicoSelecionado[]>([])
   const [novoServicoId, setNovoServicoId] = useState('')
+  const [produtos, setProdutos] = useState<ProdutoSelecionado[]>([])
+  const [novoProdutoId, setNovoProdutoId] = useState('')
   const [novoDiagnostico, setNovoDiagnostico] = useState('')
   const [diagnosticos, setDiagnosticos] = useState<DiagnosticoSelecionado[]>([])
 
@@ -348,14 +384,16 @@ export function OrderForm({
   const [previewUrls, setPreviewUrls] = useState<string[]>([])
 
   async function loadBaseData(selectedClienteId?: string | null) {
-    const [clientesRes, servicosRes, colaboradoresRes] = await Promise.all([
+    const [clientesRes, servicosRes, produtosRes, colaboradoresRes] = await Promise.all([
       supabase.from('clientes').select('id, nome, cpf_cnpj, telefone, email, cidade, bairro, nascimento, whatsapp_opt_in').order('nome', { ascending: true }),
       supabase.from('servicos').select('id, nome, is_periodico, periodicidade_meses').order('nome', { ascending: true }),
+      supabase.from('produtos').select('id,nome,marca_modelo,codigo,quantidade_estoque,valor_unitario').order('nome', { ascending: true }),
       supabase.from('perfis').select('id,nome').eq('papel', 'colaborador').eq('ativo', true).order('nome', { ascending: true }),
     ])
 
     if (clientesRes.error) console.error('Erro ao carregar clientes:', clientesRes.error)
     if (servicosRes.error) console.error('Erro ao carregar serviços:', servicosRes.error)
+    if (produtosRes.error) console.error('Erro ao carregar produtos:', produtosRes.error)
     if (colaboradoresRes.error) console.error('Erro ao carregar colaboradores:', colaboradoresRes.error)
 
     let clientesList = (clientesRes.data as ClienteOption[]) || []
@@ -378,6 +416,13 @@ export function OrderForm({
 
     setClientes(clientesList)
     setServicosDisponiveis((servicosRes.data as ServicoOption[]) || [])
+    setProdutosDisponiveis(
+      ((produtosRes.data as ProdutoOption[]) || []).map((item) => ({
+        ...item,
+        quantidade_estoque: Number(item.quantidade_estoque || 0),
+        valor_unitario: Number(item.valor_unitario || 0),
+      }))
+    )
     setCollaborators((colaboradoresRes.data as CollaboratorOption[]) || [])
   }
 
@@ -459,6 +504,17 @@ export function OrderForm({
           periodicidade_meses: s.periodicidade_meses,
         }))
       )
+      setProdutos(
+        (order.produtos || []).map((p) => ({
+          produto_id: p.produto_id,
+          nome: p.nome,
+          marca_modelo: p.marca_modelo || null,
+          codigo: p.codigo || '',
+          valor_unitario: formatMoneyInput(p.valor_unitario),
+          quantidade: String(p.quantidade ?? 1),
+          observacao: p.observacao || '',
+        }))
+      )
       setDiagnosticos(order.diagnosticos || [])
       setExistingPhotos(order.fotos || [])
     } else {
@@ -490,11 +546,13 @@ export function OrderForm({
       setFormaPagamento('')
       setObservacoes('')
       setServicos([])
+      setProdutos([])
       setDiagnosticos([])
       setExistingPhotos([])
     }
 
     setNovoServicoId('')
+    setNovoProdutoId('')
     setNovoDiagnostico('')
     setNewFiles([])
     setPreviewUrls([])
@@ -507,11 +565,15 @@ export function OrderForm({
     () => servicos.reduce((sum, item) => sum + servicoLineTotal(item.valor, item.quantidade), 0),
     [servicos]
   )
+  const subtotalProdutos = useMemo(
+    () => produtos.reduce((sum, item) => sum + produtoLineTotal(item.valor_unitario, item.quantidade), 0),
+    [produtos]
+  )
   const maoDeObraValue = useMemo(() => parseMoney(maoDeObra), [maoDeObra])
   const acrescimosValue = useMemo(() => parseMoney(acrescimos), [acrescimos])
   const valorFinal = useMemo(
-    () => subtotalServicos + maoDeObraValue + acrescimosValue,
-    [subtotalServicos, maoDeObraValue, acrescimosValue]
+    () => subtotalServicos + subtotalProdutos + maoDeObraValue + acrescimosValue,
+    [subtotalServicos, subtotalProdutos, maoDeObraValue, acrescimosValue]
   )
 
   const clientesFiltrados = useMemo(() => {
@@ -591,6 +653,78 @@ export function OrderForm({
 
   function handleRemoveServico(index: number) {
     setServicos((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  function handleAddProduto() {
+    const selected = produtosDisponiveis.find((p) => p.id === novoProdutoId)
+    if (!selected) return
+
+    if (Number(selected.quantidade_estoque || 0) < 1) {
+      setError(`Produto sem estoque disponível: ${selected.nome}.`)
+      setNovoProdutoId('')
+      return
+    }
+
+    const alreadyAdded = produtos.some((p) => p.produto_id === selected.id)
+    if (alreadyAdded) {
+      setNovoProdutoId('')
+      return
+    }
+
+    setProdutos((prev) => [
+      ...prev,
+      {
+        produto_id: selected.id,
+        nome: selected.nome,
+        marca_modelo: selected.marca_modelo,
+        codigo: selected.codigo || '',
+        valor_unitario: formatMoneyInput(selected.valor_unitario),
+        quantidade: '1',
+        observacao: '',
+      },
+    ])
+    setNovoProdutoId('')
+  }
+
+  function getPreviousProductQuantity(produtoId: string) {
+    return (order?.produtos || [])
+      .filter((item) => item.produto_id === produtoId)
+      .reduce((sum, item) => sum + parseQuantidade(item.quantidade), 0)
+  }
+
+  function getProductAvailableQuantity(produtoId: string) {
+    const product = produtosDisponiveis.find((item) => item.id === produtoId)
+    return Number(product?.quantidade_estoque || 0) + getPreviousProductQuantity(produtoId)
+  }
+
+  function normalizeProductQuantityForStock(produtoId: string, value: string | number | null | undefined) {
+    const digits = String(value ?? '').replace(/\D/g, '')
+    if (!digits) return ''
+
+    const requested = Math.max(1, Number(digits))
+    const available = getProductAvailableQuantity(produtoId)
+    if (available < 1) return '1'
+
+    return String(Math.min(requested, available))
+  }
+
+  function updateProduto(index: number, patch: Partial<ProdutoSelecionado>) {
+    setProdutos((prev) =>
+      prev.map((item, i) => {
+        if (i !== index) return item
+        const next = { ...item, ...patch }
+
+        if (Object.prototype.hasOwnProperty.call(patch, 'quantidade')) {
+          next.quantidade = normalizeProductQuantityForStock(item.produto_id, patch.quantidade)
+        }
+
+        return next
+      })
+    )
+  }
+
+  function handleRemoveProduto(index: number) {
+    setProdutos((prev) => prev.filter((_, i) => i !== index))
   }
 
   function handleAddDiagnostico() {
@@ -704,6 +838,7 @@ export function OrderForm({
 
     try {
       const selectedServicoFromDraft = servicosDisponiveis.find((item) => item.id === novoServicoId)
+      const selectedProdutoFromDraft = produtosDisponiveis.find((item) => item.id === novoProdutoId)
       const servicosToPersist = (() => {
         const current = [...servicos]
         if (selectedServicoFromDraft && !current.some((item) => item.servico_id === selectedServicoFromDraft.id)) {
@@ -716,6 +851,21 @@ export function OrderForm({
             observacao: '',
             is_periodico: selectedServicoFromDraft.is_periodico,
             periodicidade_meses: selectedServicoFromDraft.periodicidade_meses,
+          })
+        }
+        return current
+      })()
+      const produtosToPersist = (() => {
+        const current = [...produtos]
+        if (selectedProdutoFromDraft && !current.some((item) => item.produto_id === selectedProdutoFromDraft.id)) {
+          current.push({
+            produto_id: selectedProdutoFromDraft.id,
+            nome: selectedProdutoFromDraft.nome,
+            marca_modelo: selectedProdutoFromDraft.marca_modelo,
+            codigo: selectedProdutoFromDraft.codigo || '',
+            valor_unitario: formatMoneyInput(selectedProdutoFromDraft.valor_unitario),
+            quantidade: '1',
+            observacao: '',
           })
         }
         return current
@@ -796,9 +946,55 @@ export function OrderForm({
         (sum, item) => sum + servicoLineTotal(item.valor, item.quantidade),
         0
       )
+      const subtotalProdutosToPersist = produtosToPersist.reduce(
+        (sum, item) => sum + produtoLineTotal(item.valor_unitario, item.quantidade),
+        0
+      )
       const maoDeObraToPersist = parseMoney(maoDeObra)
       const acrescimosToPersist = parseMoney(acrescimos)
-      const valorFinalToPersist = subtotalServicosToPersist + maoDeObraToPersist + acrescimosToPersist
+      const valorFinalToPersist = subtotalServicosToPersist + subtotalProdutosToPersist + maoDeObraToPersist + acrescimosToPersist
+
+      const previousProductQtyById = (order?.produtos || []).reduce<Record<string, number>>((acc, item) => {
+        acc[item.produto_id] = (acc[item.produto_id] || 0) + parseQuantidade(item.quantidade)
+        return acc
+      }, {})
+      const nextProductQtyById = produtosToPersist.reduce<Record<string, number>>((acc, item) => {
+        acc[item.produto_id] = (acc[item.produto_id] || 0) + parseQuantidade(item.quantidade)
+        return acc
+      }, {})
+      const productIdsToAdjust = Array.from(new Set([...Object.keys(previousProductQtyById), ...Object.keys(nextProductQtyById)]))
+      const productsStockRes = productIdsToAdjust.length > 0
+        ? await supabase
+          .from('produtos')
+          .select('id,nome,quantidade_estoque')
+          .in('id', productIdsToAdjust)
+        : { data: [], error: null }
+
+      if (productsStockRes.error) throw productsStockRes.error
+
+      const productsStockById = (((productsStockRes.data as { id: string; nome: string; quantidade_estoque: number | null }[]) || [])
+        .reduce<Record<string, { id: string; nome: string; quantidade_estoque: number }>>((acc, item) => {
+          acc[item.id] = {
+            id: item.id,
+            nome: item.nome,
+            quantidade_estoque: Number(item.quantidade_estoque || 0),
+          }
+          return acc
+        }, {}))
+
+      const productStockUpdates = productIdsToAdjust.map((produtoId) => {
+        const product = productsStockById[produtoId]
+        const previousQty = previousProductQtyById[produtoId] || 0
+        const nextQty = nextProductQtyById[produtoId] || 0
+        const currentStock = Number(product?.quantidade_estoque || 0)
+        const availableStock = currentStock + previousQty
+        const nextStock = availableStock - nextQty
+
+        if (!product) throw new Error('Produto selecionado não encontrado no estoque.')
+        if (nextQty > availableStock) throw new Error(`Estoque insuficiente para ${product.nome}. Disponível: ${availableStock}, solicitado: ${nextQty}.`)
+
+        return { produtoId, nextStock, changed: nextStock !== currentStock }
+      }).filter((item) => item.changed)
 
       const payload = {
         numero: numero.trim() || null,
@@ -815,7 +1011,7 @@ export function OrderForm({
         forma_pagamento: formaPagamento || null,
         mao_de_obra: maoDeObraToPersist,
         acrescimos: acrescimosToPersist,
-        valor_total: subtotalServicosToPersist,
+        valor_total: subtotalServicosToPersist + subtotalProdutosToPersist,
         valor_final: valorFinalToPersist,
         status,
         observacoes: observacoes.trim() || null,
@@ -871,6 +1067,42 @@ export function OrderForm({
             observacao: s.observacao.trim() || null,
           }))
         )
+      }
+
+      if (order) {
+        const { error: deleteProdutosError } = await supabase
+          .from('ordem_produtos')
+          .delete()
+          .eq('os_id', osId)
+
+        if (deleteProdutosError) throw deleteProdutosError
+      }
+
+      if (produtosToPersist.length > 0) {
+        const { error: insertProdutosError } = await supabase
+          .from('ordem_produtos')
+          .insert(produtosToPersist.map((p) => ({
+            os_id: osId,
+            produto_id: p.produto_id,
+            quantidade: parseQuantidade(p.quantidade),
+            valor_unitario: parseMoney(p.valor_unitario),
+            codigo_produto: p.codigo.trim() || null,
+            observacao: p.observacao.trim() || null,
+          })))
+
+        if (insertProdutosError) throw insertProdutosError
+      }
+
+      for (const update of productStockUpdates) {
+        const { error: stockError } = await supabase
+          .from('produtos')
+          .update({
+            quantidade_estoque: update.nextStock,
+            atualizado_em: new Date().toISOString(),
+          })
+          .eq('id', update.produtoId)
+
+        if (stockError) throw stockError
       }
 
       if (finalVeiculoId && shouldTriggerFinalizationSideEffects) {
@@ -1021,6 +1253,9 @@ export function OrderForm({
 
   const availableServicesToAdd = servicosDisponiveis.filter(
     (servico) => !servicos.some((item) => item.servico_id === servico.id)
+  )
+  const availableProductsToAdd = produtosDisponiveis.filter(
+    (produto) => Number(produto.quantidade_estoque || 0) > 0 && !produtos.some((item) => item.produto_id === produto.id)
   )
 
   return (
@@ -1367,6 +1602,101 @@ export function OrderForm({
         </div>
 
         <div className="space-y-3 rounded-xl border p-4">
+          <p className="text-sm font-semibold">Produtos vendidos na OS</p>
+          <p className="text-xs text-muted-foreground">Selecione os produtos vendidos nesta OS. Ao salvar, o estoque será baixado automaticamente.</p>
+
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="flex-1">
+              <Select value={novoProdutoId} onValueChange={setNovoProdutoId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um produto para adicionar" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableProductsToAdd.map((produto) => (
+                    <SelectItem key={produto.id} value={produto.id}>
+                      {produto.nome}{produto.marca_modelo ? ` - ${produto.marca_modelo}` : ''} | Estoque: {produto.quantidade_estoque} | R$ {produto.valor_unitario.toFixed(2)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button type="button" onClick={handleAddProduto} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Adicionar produto
+            </Button>
+          </div>
+
+          <div className="space-y-3">
+            {produtos.map((produto, index) => {
+              const estoqueAtual = produtosDisponiveis.find((item) => item.id === produto.produto_id)?.quantidade_estoque ?? 0
+              const quantidadeDisponivel = getProductAvailableQuantity(produto.produto_id)
+              const quantidade = parseQuantidade(produto.quantidade)
+              const valorLinha = produtoLineTotal(produto.valor_unitario, produto.quantidade)
+
+              return (
+                <div key={`${produto.produto_id}-${index}`} className="space-y-3 rounded-lg border p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-medium">
+                        {produto.nome} x{quantidade}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Disponível para esta OS: {quantidadeDisponivel} | Estoque atual: {estoqueAtual} | Total: R$ {valorLinha.toFixed(2)}
+                      </p>
+                    </div>
+                    <Button type="button" variant="outline" size="sm" className="gap-2" onClick={() => handleRemoveProduto(index)}>
+                      <Trash2 className="h-4 w-4" />
+                      Remover
+                    </Button>
+                  </div>
+
+                  <div className="grid gap-3 md:grid-cols-4">
+                    <div className="space-y-2">
+                      <Label>Quantidade</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={quantidadeDisponivel}
+                        step={1}
+                        value={produto.quantidade}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                          updateProduto(index, { quantidade: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Valor unitário</Label>
+                      <Input
+                        value={produto.valor_unitario}
+                        placeholder="Ex.: 120,00"
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateProduto(index, { valor_unitario: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Código do produto</Label>
+                      <Input
+                        value={produto.codigo}
+                        placeholder="Ex.: PNEU-175-65R14"
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateProduto(index, { codigo: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2 md:col-span-1">
+                      <Label>Observação do produto</Label>
+                      <Input
+                        value={produto.observacao}
+                        placeholder="Ex.: venda balcão"
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateProduto(index, { observacao: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+            {produtos.length === 0 && <p className="text-sm text-muted-foreground">Nenhum produto adicionado.</p>}
+          </div>
+        </div>
+
+        <div className="space-y-3 rounded-xl border p-4">
           <p className="text-sm font-semibold">Diagnóstico / itens não autorizados</p>
           <p className="text-xs text-muted-foreground">Use esta lista para registrar problemas encontrados que o cliente não autorizou virar serviço na OS.</p>
 
@@ -1447,6 +1777,10 @@ export function OrderForm({
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">Subtotal dos serviços</span>
             <span className="font-semibold">R$ {subtotalServicos.toFixed(2)}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">Subtotal dos produtos</span>
+            <span className="font-semibold">R$ {subtotalProdutos.toFixed(2)}</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">Mão de obra</span>

@@ -93,6 +93,24 @@ export function OrderDetailsDialog({
             </div>
           </Section>
 
+          <Section title="Produtos vendidos">
+            <div className="space-y-2">
+              {(order.produtos || []).map((item) => {
+                const quantidade = Math.max(1, Number(item.quantidade || 1))
+                const valorLinha = Number(item.valor_unitario || 0) * quantidade
+                return (
+                <div key={item.id} className="rounded-lg border p-3">
+                  <p className="font-medium">{item.nome} x{quantidade}</p>
+                  <p className="text-sm text-muted-foreground">Valor: R$ {valorLinha.toFixed(2)}</p>
+                  {item.codigo && <p className="text-sm text-muted-foreground">Código produto: {item.codigo}</p>}
+                  {item.observacao && <p className="text-sm text-muted-foreground">Obs: {item.observacao}</p>}
+                </div>
+                )
+              })}
+              {(order.produtos || []).length === 0 && <p className="text-sm text-muted-foreground">Nenhum produto adicionado.</p>}
+            </div>
+          </Section>
+
           <Section title="Diagnóstico / não autorizado">
             <div className="space-y-2">
               {order.diagnosticos.map((item) => (

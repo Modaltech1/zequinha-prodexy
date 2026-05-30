@@ -22,6 +22,7 @@ export type PrintableOrder = {
   acrescimos?: number | null
   forma_pagamento?: string | null
   servicos: { id: string; nome: string; valor?: number; quantidade?: number | null; codigo_peca?: string | null; observacao?: string | null }[]
+  produtos?: { id: string; nome: string; marca_modelo?: string | null; valor_unitario?: number; quantidade?: number | null; codigo?: string | null; observacao?: string | null }[]
   diagnosticos: { id: string; descricao: string }[]
   fotos?: { id: string; foto_url: string }[]
 }
@@ -93,6 +94,21 @@ export function buildOrderPrintHtml(order: PrintableOrder, logoUrl?: string) {
       return `<li>${parts.join(' • ')}</li>`
     }).join('')
     : '<li>Nenhum serviço registrado.</li>'
+  const productsHtml = (order.produtos?.length ?? 0) > 0
+    ? order.produtos!.map((item) => {
+      const quantidade = Math.max(1, Number(item.quantidade || 1))
+      const valorUnitario = Number(item.valor_unitario || 0)
+      const valorLinha = valorUnitario * quantidade
+      const parts = [
+        `<strong>${escapeHtml(item.nome)} x${quantidade}</strong>`,
+        item.marca_modelo ? `Marca/modelo: ${escapeHtml(item.marca_modelo)}` : '',
+        item.codigo ? `Código produto: ${escapeHtml(item.codigo)}` : '',
+        item.observacao ? `Obs: ${escapeHtml(item.observacao)}` : '',
+        valorLinha > 0 ? `Valor: ${escapeHtml(formatMoney(valorLinha))}` : '',
+      ].filter(Boolean)
+      return `<li>${parts.join(' • ')}</li>`
+    }).join('')
+    : '<li>Nenhum produto registrado.</li>'
   const diagnosticsHtml = order.diagnosticos.length
     ? order.diagnosticos.map((item) => `<li>${escapeHtml(item.descricao)}</li>`).join('')
     : '<li>Nenhum diagnóstico não autorizado registrado.</li>'
@@ -186,6 +202,11 @@ export function buildOrderPrintHtml(order: PrintableOrder, logoUrl?: string) {
     <section class="section">
       <h3>Serviços autorizados na OS</h3>
       <ul>${servicesHtml}</ul>
+    </section>
+
+    <section class="section">
+      <h3>Produtos vendidos na OS</h3>
+      <ul>${productsHtml}</ul>
     </section>
 
     <section class="section">
