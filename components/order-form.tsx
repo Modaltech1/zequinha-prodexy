@@ -1271,7 +1271,10 @@ export function OrderForm({
         </Button>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-6 [&_input]:border-[#d8c9b6] [&_input]:bg-white/75 [&_input]:shadow-sm [&_textarea]:border-[#d8c9b6] [&_textarea]:bg-white/75 [&_textarea]:shadow-sm [&_[role=combobox]]:border-[#d8c9b6] [&_[role=combobox]]:bg-white/75 [&_[role=combobox]]:shadow-sm [&_input:disabled]:bg-white/35 [&_input:disabled]:text-muted-foreground"
+      >
         {error && <p className="text-sm text-destructive">{error}</p>}
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 rounded-xl border p-4">
@@ -1729,7 +1732,6 @@ export function OrderForm({
         <div className="space-y-3 rounded-xl border p-4">
           <p className="text-sm font-semibold">Mão de obra</p>
           <div className="space-y-2">
-            <Label htmlFor="mao-de-obra">Mão de obra</Label>
             <Input id="mao-de-obra" value={maoDeObra} placeholder="Ex.: 80,00" onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMaoDeObra(e.target.value)} />
           </div>
         </div>
