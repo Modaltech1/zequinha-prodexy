@@ -41,7 +41,7 @@ export function MobileNav({ mode, collaboratorName }: MobileNavProps) {
   }
 
   return (
-    <div className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b bg-card px-4 lg:hidden">
+    <div className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b bg-card px-4">
       <Sheet>
         <SheetTrigger asChild>
           <Button variant="ghost" size="icon">
