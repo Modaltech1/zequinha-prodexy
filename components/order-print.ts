@@ -20,6 +20,7 @@ export type PrintableOrder = {
   responsavel_nome?: string | null
   mao_de_obra?: number | null
   acrescimos?: number | null
+  desconto?: number | null
   forma_pagamento?: string | null
   servicos: { id: string; nome: string; valor?: number; quantidade?: number | null; codigo_peca?: string | null; observacao?: string | null }[]
   produtos?: { id: string; nome: string; marca_modelo?: string | null; valor_unitario?: number; quantidade?: number | null; codigo?: string | null; observacao?: string | null }[]
@@ -145,7 +146,10 @@ export function buildOrderPrintHtml(order: PrintableOrder, logoUrl?: string) {
     .value { font-weight: 700; }
     ul { margin: 6px 0 0 18px; padding: 0; }
     li { margin-bottom: 4px; }
-    .total { display: flex; justify-content: space-between; align-items: center; font-size: 15px; font-weight: 700; }
+    .financial-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+    .financial-row:last-child { margin-bottom: 0; }
+    .financial-row.discount { color: #b91c1c; }
+    .financial-row.final { border-top: 1px solid #d1d5db; margin-top: 8px; padding-top: 8px; font-size: 15px; font-weight: 700; }
     .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 34px; }
     .signature { border-top: 1px solid #111827; padding-top: 8px; text-align: center; }
     .terms { font-size: 11px; color: #374151; }
@@ -230,12 +234,24 @@ export function buildOrderPrintHtml(order: PrintableOrder, logoUrl?: string) {
       <h3>Pagamento</h3>
       <div class="grid">
         <div><span class="label">Forma de pagamento</span><span class="value">${escapeHtml(order.forma_pagamento || 'Não informado')}</span></div>
+        <div><span class="label">Desconto</span><span class="value">- ${formatMoney(order.desconto || 0)}</span></div>
       </div>
     </section>
 
-    <section class="section total">
-      <span>Valor total da OS</span>
-      <span>${formatMoney(order.valor_final || order.valor_total || 0)}</span>
+    <section class="section">
+      <h3>Resumo financeiro</h3>
+      <div class="financial-row">
+        <span>Valor antes do desconto</span>
+        <strong>${formatMoney(Number(order.valor_final || 0) + Number(order.desconto || 0))}</strong>
+      </div>
+      <div class="financial-row discount">
+        <span>Desconto aplicado</span>
+        <strong>- ${formatMoney(order.desconto || 0)}</strong>
+      </div>
+      <div class="financial-row final">
+        <span>Valor final da OS</span>
+        <span>${formatMoney(order.valor_final || order.valor_total || 0)}</span>
+      </div>
     </section>
 
     <p class="terms">

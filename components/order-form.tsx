@@ -68,6 +68,7 @@ export type OrdemServicoEdit = {
   km_entrada?: number | null
   mao_de_obra?: number | null
   acrescimos?: number | null
+  desconto?: number | null
   responsavel_id?: string | null
   forma_pagamento?: string | null
   servicos: {
@@ -370,6 +371,7 @@ export function OrderForm({
   const [responsavelId, setResponsavelId] = useState('')
   const [maoDeObra, setMaoDeObra] = useState('')
   const [acrescimos, setAcrescimos] = useState('')
+  const [desconto, setDesconto] = useState('')
   const [formaPagamento, setFormaPagamento] = useState('')
 
   const [servicos, setServicos] = useState<ServicoSelecionado[]>([])
@@ -490,6 +492,7 @@ export function OrderForm({
       setResponsavelId(order.responsavel_id || '')
       setMaoDeObra(formatMoneyInput(order.mao_de_obra))
       setAcrescimos(formatMoneyInput(order.acrescimos))
+      setDesconto(formatMoneyInput(order.desconto))
       setFormaPagamento(order.forma_pagamento || '')
       setObservacoes(order.observacoes || '')
       setServicos(
@@ -543,6 +546,7 @@ export function OrderForm({
       setResponsavelId('')
       setMaoDeObra('')
       setAcrescimos('')
+      setDesconto('')
       setFormaPagamento('')
       setObservacoes('')
       setServicos([])
@@ -571,9 +575,18 @@ export function OrderForm({
   )
   const maoDeObraValue = useMemo(() => parseMoney(maoDeObra), [maoDeObra])
   const acrescimosValue = useMemo(() => parseMoney(acrescimos), [acrescimos])
-  const valorFinal = useMemo(
+  const valorAntesDesconto = useMemo(
     () => subtotalServicos + subtotalProdutos + maoDeObraValue + acrescimosValue,
     [subtotalServicos, subtotalProdutos, maoDeObraValue, acrescimosValue]
+  )
+  const descontoInformado = useMemo(() => Math.max(0, parseMoney(desconto)), [desconto])
+  const descontoValue = useMemo(
+    () => Math.min(descontoInformado, valorAntesDesconto),
+    [descontoInformado, valorAntesDesconto]
+  )
+  const valorFinal = useMemo(
+    () => Math.max(0, valorAntesDesconto - descontoValue),
+    [valorAntesDesconto, descontoValue]
   )
 
   const clientesFiltrados = useMemo(() => {
@@ -952,7 +965,9 @@ export function OrderForm({
       )
       const maoDeObraToPersist = parseMoney(maoDeObra)
       const acrescimosToPersist = parseMoney(acrescimos)
-      const valorFinalToPersist = subtotalServicosToPersist + subtotalProdutosToPersist + maoDeObraToPersist + acrescimosToPersist
+      const valorAntesDescontoToPersist = subtotalServicosToPersist + subtotalProdutosToPersist + maoDeObraToPersist + acrescimosToPersist
+      const descontoToPersist = Math.min(Math.max(0, parseMoney(desconto)), valorAntesDescontoToPersist)
+      const valorFinalToPersist = Math.max(0, valorAntesDescontoToPersist - descontoToPersist)
 
       const previousProductQtyById = (order?.produtos || []).reduce<Record<string, number>>((acc, item) => {
         acc[item.produto_id] = (acc[item.produto_id] || 0) + parseQuantidade(item.quantidade)
@@ -1011,6 +1026,7 @@ export function OrderForm({
         forma_pagamento: formaPagamento || null,
         mao_de_obra: maoDeObraToPersist,
         acrescimos: acrescimosToPersist,
+        desconto: descontoToPersist,
         valor_total: subtotalServicosToPersist + subtotalProdutosToPersist,
         valor_final: valorFinalToPersist,
         status,
@@ -1775,6 +1791,32 @@ export function OrderForm({
           <Textarea id="observacoes" value={observacoes} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setObservacoes(e.target.value)} placeholder="Detalhes adicionais da OS..." />
         </div>
 
+        <div className="rounded-xl border p-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold">Desconto</p>
+              <p className="text-xs text-muted-foreground">
+                Aplicado sobre o valor completo da OS. Máximo disponível: R$ {valorAntesDesconto.toFixed(2)}.
+              </p>
+            </div>
+            <div className="w-full space-y-2 sm:w-[240px]">
+              <Label htmlFor="desconto-os">Valor do desconto</Label>
+              <Input
+                id="desconto-os"
+                inputMode="decimal"
+                value={desconto}
+                placeholder="Ex.: 50,00"
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDesconto(e.target.value)}
+                onBlur={() => {
+                  if (descontoInformado > valorAntesDesconto) {
+                    setDesconto(formatMoneyInput(valorAntesDesconto))
+                  }
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
         <div className="rounded-xl border bg-muted/30 p-4 text-sm space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">Subtotal dos serviços</span>
@@ -1791,6 +1833,10 @@ export function OrderForm({
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">Valor da OS</span>
             <span className="font-semibold">R$ {acrescimosValue.toFixed(2)}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">Desconto</span>
+            <span className="font-semibold text-destructive">- R$ {descontoValue.toFixed(2)}</span>
           </div>
           <div className="flex items-center justify-between border-t pt-2">
             <span className="text-muted-foreground">Valor final da OS</span>

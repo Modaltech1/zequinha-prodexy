@@ -21,7 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@prodexy/ui'
-import { Search, Wrench, Car, Plus, Pencil, Trash2, Camera, FileText, Printer, Filter, MoreHorizontal, Eye, Package } from 'lucide-react'
+import { Search, Wrench, Car, Plus, Pencil, Trash2, Camera, FileText, Printer, Filter, MoreHorizontal, Eye, Package, CalendarDays } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
 import { ListPagination } from '@/components/list-pagination'
 import { OrderDetailsDialog, type OrdemServicoDetails } from '@/components/order-details-dialog'
@@ -48,6 +48,7 @@ type OrdemRow = {
   km_entrada?: number | null
   mao_de_obra?: number | null
   acrescimos?: number | null
+  desconto?: number | null
   responsavel_id?: string | null
   forma_pagamento?: string | null
 }
@@ -131,10 +132,36 @@ type OrdersPageProps = {
 }
 
 type StatusFilter = 'ativas' | 'todos' | 'agendada' | 'aberta' | 'em_andamento' | 'finalizada' | 'cancelada'
+type PeriodFilter = 'todos' | 'hoje' | 'semana' | 'mes'
 
 const ACTIVE_ORDER_STATUSES = ['agendada', 'aberta', 'em_andamento']
 const ORDER_SELECT =
-  'id,numero,cliente_id,veiculo_id,veiculo_placa,veiculo_marca,veiculo_modelo,veiculo_ano,veiculo_cor,veiculo_tem_seguro,valor_total,valor_final,status,observacoes,criado_em,atualizado_em,km_entrada,mao_de_obra,acrescimos,responsavel_id,forma_pagamento' as const
+  'id,numero,cliente_id,veiculo_id,veiculo_placa,veiculo_marca,veiculo_modelo,veiculo_ano,veiculo_cor,veiculo_tem_seguro,valor_total,valor_final,status,observacoes,criado_em,atualizado_em,km_entrada,mao_de_obra,acrescimos,desconto,responsavel_id,forma_pagamento' as const
+
+function getPeriodRange(filter: PeriodFilter) {
+  if (filter === 'todos') return null
+
+  const now = new Date()
+  let start: Date
+  let end: Date
+
+  if (filter === 'hoje') {
+    start = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+  } else if (filter === 'semana') {
+    const daysSinceMonday = (now.getDay() + 6) % 7
+    start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysSinceMonday)
+    end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 7)
+  } else {
+    start = new Date(now.getFullYear(), now.getMonth(), 1)
+    end = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+  }
+
+  return {
+    start: start.toISOString(),
+    end: end.toISOString(),
+  }
+}
 
 export function OrdersPage({
   title = 'Ordens de Serviço',
@@ -155,6 +182,7 @@ export function OrdersPage({
 
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ativas')
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('todos')
   const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
@@ -164,7 +192,10 @@ export function OrdersPage({
 
   const basePath = collaboratorMode ? '/colaborador/ordens' : '/admin/ordens'
 
-  async function loadOrders(filter: StatusFilter = statusFilter) {
+  async function loadOrders(
+    filter: StatusFilter = statusFilter,
+    period: PeriodFilter = periodFilter
+  ) {
     setLoading(true)
 
     let ordensQuery = supabase.from('ordens_de_servico').select(ORDER_SELECT).order('criado_em', { ascending: false })
@@ -173,6 +204,13 @@ export function OrdersPage({
       ordensQuery = ordensQuery.in('status', ACTIVE_ORDER_STATUSES)
     } else if (filter !== 'todos') {
       ordensQuery = ordensQuery.eq('status', filter)
+    }
+
+    const periodRange = getPeriodRange(period)
+    if (periodRange) {
+      ordensQuery = ordensQuery
+        .gte('criado_em', periodRange.start)
+        .lt('criado_em', periodRange.end)
     }
 
     const [ordensRes, colaboradoresRes] = await Promise.all([
@@ -326,8 +364,8 @@ export function OrdersPage({
   }
 
   useEffect(() => {
-    loadOrders(statusFilter)
-  }, [statusFilter])
+    loadOrders(statusFilter, periodFilter)
+  }, [statusFilter, periodFilter])
 
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
@@ -420,6 +458,7 @@ export function OrdersPage({
       responsavel_nome: responsavel?.nome || '',
       mao_de_obra: Number(order.mao_de_obra || 0),
       acrescimos: Number(order.acrescimos || 0),
+      desconto: Number(order.desconto || 0),
       forma_pagamento: order.forma_pagamento || null,
       servicos: itens,
       produtos: produtosDaOs,
@@ -557,6 +596,25 @@ export function OrdersPage({
                   <SelectItem value="finalizada">Finalizadas</SelectItem>
                   <SelectItem value="cancelada">Canceladas</SelectItem>
                   <SelectItem value="todos">Todos os status</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={periodFilter}
+                onValueChange={(value: string) => {
+                  setPeriodFilter(value as PeriodFilter)
+                  setCurrentPage(1)
+                }}
+              >
+                <SelectTrigger className="w-full sm:w-[220px]">
+                  <CalendarDays className="mr-2 h-4 w-4" />
+                  <SelectValue placeholder="Filtrar por período..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos os períodos</SelectItem>
+                  <SelectItem value="hoje">Dia atual</SelectItem>
+                  <SelectItem value="semana">Semana atual</SelectItem>
+                  <SelectItem value="mes">Mês atual</SelectItem>
                 </SelectContent>
               </Select>
             </div>

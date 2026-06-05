@@ -27,6 +27,7 @@ type OrdemRow = {
   km_entrada?: number | null
   mao_de_obra?: number | null
   acrescimos?: number | null
+  desconto?: number | null
   responsavel_id?: string | null
   forma_pagamento?: string | null
 }
@@ -288,6 +289,7 @@ export function OrderEditorPage({
           : Number(row.km_entrada),
         mao_de_obra: row.mao_de_obra == null ? 0 : Number(row.mao_de_obra),
         acrescimos: row.acrescimos == null ? 0 : Number(row.acrescimos),
+        desconto: row.desconto == null ? 0 : Number(row.desconto),
         responsavel_id: row.responsavel_id || null,
         forma_pagamento: row.forma_pagamento || null,
         servicos: ((serviceRowsRes.data as OrdemServicoItemRow[]) || []).map((item) => ({
