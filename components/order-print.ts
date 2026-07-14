@@ -241,6 +241,10 @@ export function buildOrderPrintHtml(order: PrintableOrder, logoUrl?: string) {
     <section class="section">
       <h3>Resumo financeiro</h3>
       <div class="financial-row">
+        <span>Mão de obra</span>
+        <strong>${formatMoney(Number(order.mao_de_obra || 0))}</strong>
+      </div>
+      <div class="financial-row">
         <span>Valor antes do desconto</span>
         <strong>${formatMoney(Number(order.valor_final || 0) + Number(order.desconto || 0))}</strong>
       </div>
