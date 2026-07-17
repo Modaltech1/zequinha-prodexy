@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useEffect, useMemo, useState } from 'react'
 import {
@@ -231,17 +231,17 @@ export default function Page() {
             const itemTotal = produto.quantidade_estoque * produto.valor_unitario
 
             return (
-              <div key={produto.id} className="flex flex-col gap-4 rounded-xl border p-4 lg:flex-row lg:items-center lg:justify-between">
+              <div key={produto.id} className="group flex flex-col gap-4 rounded-xl border bg-card p-4 shadow-sm transition-colors hover:border-primary/40 hover:bg-muted/20 lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex items-start gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted">
-                    <Package className="h-5 w-5 text-muted-foreground" />
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                    <Package className="h-5 w-5 text-primary" />
                   </div>
-                  <div className="space-y-2">
+                  <div className="min-w-0 space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-medium">{produto.nome}</p>
+                      <p className="text-base font-semibold leading-tight text-foreground">{produto.nome}</p>
                       {produto.marca_modelo && <Badge variant="secondary">{produto.marca_modelo}</Badge>}
                     </div>
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                    <div className="grid gap-1.5 text-sm text-muted-foreground sm:grid-cols-3">
                       <span>CÃ³digo: {produto.codigo || '-'}</span>
                       <span>UnitÃ¡rio: {formatCurrency(produto.valor_unitario)}</span>
                       <span>Total: {formatCurrency(itemTotal)}</span>
@@ -249,8 +249,8 @@ export default function Page() {
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                  <div className="flex h-10 items-center overflow-hidden rounded-md border">
+                <div className="flex flex-col gap-3 lg:items-end">
+                  <div className="flex h-10 w-full items-center justify-center overflow-hidden rounded-md border bg-background sm:w-auto">
                     <Button
                       type="button"
                       variant="ghost"
@@ -278,7 +278,7 @@ export default function Page() {
                     </Button>
                   </div>
 
-                  <div className="flex gap-2">
+                  <div className="flex w-full gap-2 sm:w-auto [&>button]:flex-1 [&>button]:sm:flex-none">
                     <Button
                       variant="outline"
                       size="sm"

@@ -1,4 +1,4 @@
-﻿// app/admin/clientes/page.tsx
+// app/admin/clientes/page.tsx
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
@@ -399,13 +399,13 @@ export default function Page() {
                             return (
                                 <div
                                     key={customer.id}
-                                    className="flex flex-col gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50 lg:flex-row lg:items-center lg:justify-between"
+                                    className="group flex flex-col gap-4 rounded-xl border bg-card p-4 shadow-sm transition-colors hover:border-primary/40 hover:bg-muted/20 lg:flex-row lg:items-center lg:justify-between"
                                 >
                                     <div className="flex flex-1 items-start gap-4">
-                                        <div className="flex-1 space-y-1">
-                                            <h3 className="font-semibold">{customer.nome}</h3>
+                                        <div className="min-w-0 flex-1 space-y-2">
+                                            <h3 className="text-base font-semibold leading-tight text-foreground">{customer.nome}</h3>
 
-                                            <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                                            <div className="grid gap-1.5 text-sm text-muted-foreground sm:grid-cols-2 xl:grid-cols-3">
                                                 {customer.telefone && (
                                                     <div className="flex items-center gap-1.5">
                                                         <Phone className="h-3.5 w-3.5" />
@@ -435,15 +435,15 @@ export default function Page() {
                                         </div>
                                     </div>
 
-                                    <div className="flex flex-wrap gap-6 lg:justify-end">
-                                        <div className="text-left lg:text-right">
+                                    <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap lg:justify-end">
+                                        <div className="rounded-lg bg-muted/30 px-3 py-2 text-left lg:text-right">
                                             <p className="text-xs text-muted-foreground">Total Compras</p>
                                             <p className="text-sm font-semibold">
                                                 {formatCurrency(customer.totalPurchases)}
                                             </p>
                                         </div>
 
-                                        <div className="text-left lg:text-right">
+                                        <div className="rounded-lg bg-muted/30 px-3 py-2 text-left lg:text-right">
                                             <p className="text-xs text-muted-foreground">AniversÃ¡rio</p>
                                             <p className="text-sm font-semibold">
                                                 {formatBirthDate(customer.nascimento)}
@@ -451,7 +451,7 @@ export default function Page() {
                                         </div>
                                     </div>
 
-                                    <div className="flex gap-2 lg:ml-4">
+                                    <div className="flex gap-2 self-stretch sm:self-auto lg:ml-4 [&>button]:flex-1 [&>button]:sm:flex-none">
                                         <Button variant="outline" size="sm" onClick={() => handleEdit(customer)}>
                                             <Pencil className="h-4 w-4" />
                                         </Button>

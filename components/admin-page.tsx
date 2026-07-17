@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+﻿import type { ReactNode } from 'react'
 
 type AdminPageProps = {
   children: ReactNode
@@ -12,7 +12,7 @@ type AdminPageHeaderProps = {
 
 export function AdminPage({ children }: AdminPageProps) {
   return (
-    <div className="mx-auto w-full max-w-[1440px] space-y-6">
+    <div className="w-full space-y-6">
       {children}
     </div>
   )

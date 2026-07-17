@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useEffect, useMemo, useState } from 'react'
 import {
@@ -175,14 +175,14 @@ export default function Page() {
           />
 
           {paginatedServicos.map((servico) => (
-            <div key={servico.id} className="flex flex-col gap-4 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div key={servico.id} className="group flex flex-col gap-4 rounded-xl border bg-card p-4 shadow-sm transition-colors hover:border-primary/40 hover:bg-muted/20 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-start gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted">
-                  <Wrench className="h-5 w-5 text-muted-foreground" />
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                  <Wrench className="h-5 w-5 text-primary" />
                 </div>
-                <div className="space-y-2">
+                <div className="min-w-0 space-y-2">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-medium">{servico.nome}</p>
+                    <p className="text-base font-semibold leading-tight text-foreground">{servico.nome}</p>
                     {servico.is_periodico ? (
                       <Badge variant="secondary">PeriÃ³dico â€¢ {servico.periodicidade_meses || 0} mÃªs(es)</Badge>
                     ) : (
@@ -193,7 +193,7 @@ export default function Page() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex w-full gap-2 sm:w-auto [&>button]:flex-1 [&>button]:sm:flex-none">
                 <Button
                   variant="outline"
                   size="sm"

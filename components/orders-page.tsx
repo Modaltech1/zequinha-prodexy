@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -617,7 +617,7 @@ export function OrdersPage({
           </ListToolbar>
         </CardHeader>
 
-        <CardContent className="space-y-3">
+        <CardContent className="min-w-0 flex-1 space-y-3">
           <ListState
             loading={loading}
             loadingText="Carregando ordens de serviÃ§o..."
@@ -636,31 +636,31 @@ export function OrdersPage({
             const details = buildOrderDetails(order)
 
             return (
-              <div key={order.id} className="rounded-xl border p-4 transition-colors">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="space-y-3">
+              <div key={order.id} className="group rounded-xl border bg-card p-4 shadow-sm transition-colors hover:border-primary/40 hover:bg-muted/20">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="min-w-0 flex-1 space-y-3">
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-semibold">OS #{formatOsNumber(order.numero, order.id)}</p>
+                      <p className="text-base font-semibold leading-tight text-foreground">OS #{formatOsNumber(order.numero, order.id)}</p>
                       <Badge variant={order.status === 'finalizada' ? 'default' : 'secondary'}>
                         {formatStatus(order.status)}
                       </Badge>
                     </div>
 
-                    <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-2 xl:grid-cols-3">
+                    <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-2 xl:grid-cols-4">
                       <InfoLine icon={Car} text={vehicleLabel} />
                       <InfoLine icon={Wrench} text={`${itemCount} serviÃ§o(s)`} />
                       <InfoLine icon={Package} text={`${productsCount} produto(s)`} />
                       <InfoLine icon={FileText} text={`${diagnosticsCount} diagnÃ³stico(s)`} />
                       <InfoLine icon={Camera} text={`${photosCount} foto(s)`} />
                       <p><span className="font-medium text-foreground">Cliente:</span> {customer?.nome || 'Cliente nÃ£o identificado'}</p>
-                      <p><span className="font-medium text-foreground">Valor:</span> R$ {Number(order.valor_final || order.valor_total || 0).toFixed(2)}</p>
+                      <p className="rounded-lg bg-muted/30 px-3 py-2"><span className="font-medium text-foreground">Valor:</span> R$ {Number(order.valor_final || order.valor_total || 0).toFixed(2)}</p>
                       <p><span className="font-medium text-foreground">KM entrada:</span> {order.km_entrada ?? '-'}</p>
                       <p><span className="font-medium text-foreground">Criado em:</span> {new Date(order.criado_em).toLocaleDateString('pt-BR')}</p>
                       <p><span className="font-medium text-foreground">Seguro:</span> {(vehicle?.tem_seguro || order.veiculo_tem_seguro) ? 'Sim' : 'NÃ£o'}</p>
                     </div>
                   </div>
 
-                  <div className="flex justify-end">
+                  <div className="flex justify-end lg:pl-4">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" size="sm" className="gap-2">
