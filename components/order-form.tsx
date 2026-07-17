@@ -592,8 +592,18 @@ export function OrderForm({
     [valorAntesDesconto, descontoValue]
   )
 
+  const effectiveClienteId = clienteId || order?.cliente_id || ''
+  const effectiveVeiculoId = veiculoId || order?.veiculo_id || ''
+  const orderVehicleOption = useMemo(() => buildOrderVehicleOption(order), [order])
+
+  const selectedCustomer = effectiveClienteId
+    ? clientes.find((cliente) => cliente.id === effectiveClienteId) || order?.cliente || undefined
+    : undefined
+
   const clientesFiltrados = useMemo(() => {
-    const selected = clienteId ? clientes.find((cliente) => cliente.id === clienteId) : undefined
+    const selected = effectiveClienteId
+      ? clientes.find((cliente) => cliente.id === effectiveClienteId) || order?.cliente || undefined
+      : undefined
     const term = clienteSearch.trim().toLowerCase()
     const digits = normalizeDigits(clienteSearch)
     const filtered = (!term && !digits
@@ -610,9 +620,8 @@ export function OrderForm({
       return [selected, ...filtered].slice(0, 30)
     }
     return filtered
-  }, [clientes, clienteSearch, clienteId])
+  }, [clientes, clienteSearch, effectiveClienteId, order?.cliente])
 
-  const selectedCustomer = clienteId ? clientes.find((cliente) => cliente.id === clienteId) : undefined
   const clientesParaSelect = selectedCustomer
     ? mergeById(clientesFiltrados, selectedCustomer)
     : clientesFiltrados
@@ -621,7 +630,9 @@ export function OrderForm({
     ? `${selectedCustomer.nome || 'Cliente sem nome'}${selectedCustomer.cpf_cnpj ? ` • ${selectedCustomer.cpf_cnpj}` : ''}`
     : ''
 
-  const selectedVehicle = veiculoId ? veiculos.find((veiculo) => veiculo.id === veiculoId) : undefined
+  const selectedVehicle = effectiveVeiculoId
+    ? veiculos.find((veiculo) => veiculo.id === effectiveVeiculoId) || orderVehicleOption || undefined
+    : undefined
   const veiculosParaSelect = selectedVehicle
     ? mergeById(veiculos, selectedVehicle)
     : veiculos
@@ -800,14 +811,14 @@ export function OrderForm({
   }
 
   async function ensureCustomer(): Promise<{ id: string; cliente: ClienteOption }> {
-    if (clienteId) {
-      let cliente = clientes.find((item) => item.id === clienteId)
+    if (effectiveClienteId) {
+      let cliente = clientes.find((item) => item.id === effectiveClienteId) || order?.cliente || undefined
 
       if (!cliente) {
         const { data, error } = await supabase
           .from('clientes')
           .select('id, nome, cpf_cnpj, telefone, email, cidade, bairro, nascimento, whatsapp_opt_in')
-          .eq('id', clienteId)
+          .eq('id', effectiveClienteId)
           .maybeSingle()
 
         if (error) throw error
@@ -817,7 +828,7 @@ export function OrderForm({
         setClientes((prev) => mergeById(prev, cliente!))
       }
 
-      return { id: clienteId, cliente }
+      return { id: effectiveClienteId, cliente }
     }
 
     if (!createClientInline) throw new Error('Selecione um cliente ou cadastre um novo pelo formulário.')
@@ -899,7 +910,7 @@ export function OrderForm({
 
       const { id: finalClienteId, cliente: clienteForWhatsapp } = await ensureCustomer()
       if (!finalClienteId) throw new Error('Selecione um cliente.')
-      if (!isNovoVeiculo && !veiculoId) throw new Error('Selecione um veículo ou cadastre um novo.')
+      if (!isNovoVeiculo && !effectiveVeiculoId) throw new Error('Selecione um veículo ou cadastre um novo.')
       if (isNovoVeiculo && !veiculoPlaca.trim()) throw new Error('Informe a placa do veículo.')
 
       const kmEntradaValue = kmEntrada.trim() ? Number(kmEntrada.replace(',', '.')) : null
@@ -907,7 +918,7 @@ export function OrderForm({
         throw new Error('KM de entrada inválido.')
       }
 
-      let finalVeiculoId = veiculoId || null
+      let finalVeiculoId = effectiveVeiculoId || null
       let finalVeiculoPlaca = veiculoPlaca.trim() || null
       let finalVeiculoMarca = veiculoMarca.trim() || null
       let finalVeiculoModelo = veiculoModelo.trim() || null
@@ -947,7 +958,7 @@ export function OrderForm({
         finalVeiculoCor = veiculoData.cor || finalVeiculoCor
         finalVeiculoTemSeguro = Boolean(veiculoData.tem_seguro)
       } else {
-        const selected = veiculos.find((item) => item.id === veiculoId)
+        const selected = veiculos.find((item) => item.id === effectiveVeiculoId) || orderVehicleOption
         if (!selected) throw new Error('Veículo selecionado não encontrado para o cliente.')
 
         finalVeiculoPlaca = selected.placa || finalVeiculoPlaca
@@ -1304,7 +1315,7 @@ export function OrderForm({
 
           <div className="space-y-2">
             <Label>Status</Label>
-            <Select value={status} onValueChange={setStatus}>
+            <Select value={status || order?.status || 'em_andamento'} onValueChange={setStatus}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione o status" />
               </SelectTrigger>
@@ -1398,7 +1409,7 @@ export function OrderForm({
               <div className="space-y-2">
                 <Label>Selecionar cliente</Label>
                 <Select
-                  value={clienteId}
+                  value={effectiveClienteId}
                   onValueChange={(value: string) => {
                     setClienteId(value)
                     clearVehicle()
@@ -1474,17 +1485,17 @@ export function OrderForm({
           <p className="text-sm font-semibold">Veículo</p>
           <div className="flex flex-col gap-2 sm:flex-row">
             <Select
-              value={veiculoId}
+              value={effectiveVeiculoId}
               onValueChange={(value: string) => {
                 setVeiculoId(value)
                 setIsNovoVeiculo(false)
               }}
-              disabled={!clienteId || createClientInline || veiculosParaSelect.length === 0}
+              disabled={!effectiveClienteId || createClientInline || veiculosParaSelect.length === 0}
             >
               <SelectTrigger className="flex-1">
                 <SelectValue
                   placeholder={
-                    !clienteId || createClientInline
+                    !effectiveClienteId || createClientInline
                       ? 'Selecione ou salve um cliente primeiro'
                       : veiculosParaSelect.length === 0
                         ? 'Nenhum veículo cadastrado'
@@ -1500,7 +1511,7 @@ export function OrderForm({
                 ))}
               </SelectContent>
             </Select>
-            <Button type="button" variant="outline" onClick={clearVehicle} disabled={!clienteId && !createClientInline}>
+            <Button type="button" variant="outline" onClick={clearVehicle} disabled={!effectiveClienteId && !createClientInline}>
               Cadastrar novo veículo
             </Button>
           </div>
