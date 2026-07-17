@@ -16,6 +16,7 @@ import {
 } from '@prodexy/ui'
 import { Search, Plus, Package, Trash2, Pencil, Wrench, Filter } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
+import { AdminPage, AdminPageHeader } from '@/components/admin-page'
 import { ServicoDialog, type ServicoRow } from '@/components/servico-dialog'
 
 export default function Page() {
@@ -98,23 +99,23 @@ export default function Page() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Serviços</h1>
-          <p className="text-muted-foreground">Cadastre o catálogo de serviços e configure quais geram manutenção periódica.</p>
-        </div>
-        <Button
-          onClick={() => {
-            setSelectedServico(null)
-            setDialogOpen(true)
-          }}
-          className="gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          Novo serviço
-        </Button>
-      </div>
+    <AdminPage>
+      <AdminPageHeader
+        title="Serviços"
+        description="Cadastre o catálogo de serviços e configure quais geram manutenção periódica."
+        actions={
+          <Button
+            onClick={() => {
+              setSelectedServico(null)
+              setDialogOpen(true)
+            }}
+            className="gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Novo serviço
+          </Button>
+        }
+      />
 
       <div className="grid gap-4 md:grid-cols-3">
         <SummaryCard title="Total de serviços" value={String(totalServicos)} icon={Package} />
@@ -208,7 +209,7 @@ export default function Page() {
       </Card>
 
       <ServicoDialog open={dialogOpen} onOpenChange={setDialogOpen} servico={selectedServico} onSaved={loadServicos} />
-    </div>
+    </AdminPage>
   )
 }
 

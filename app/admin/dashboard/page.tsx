@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from '@prodexy/ui'
 import { Users, ClipboardList, Clock, CheckCircle2, DollarSign, TrendingUp } from 'lucide-react'
+import { AdminPage, AdminPageHeader } from '@/components/admin-page'
 import { supabase } from '@/lib/supabaseClient'
 import { formatOsNumber } from '@/lib/format-os-number'
 
@@ -386,18 +387,16 @@ export default function Page() {
         : []
 
     return (
-        <div className="space-y-8">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-                    <p className="text-muted-foreground">Visão geral do seu negócio</p>
-                </div>
-
+        <AdminPage>
+            <AdminPageHeader
+                title="Dashboard"
+                description="Visão geral do seu negócio"
+                actions={
                 <Select
                     value={dateFilter}
                     onValueChange={(val) => setDateFilter(val as DateFilter)}
                 >
-                    <SelectTrigger className="w-[200px]">
+                    <SelectTrigger className="w-full sm:w-[200px]">
                         <SelectValue placeholder="Selecione o período" />
                     </SelectTrigger>
                     <SelectContent>
@@ -410,7 +409,8 @@ export default function Page() {
                         <SelectItem value="custom">Período Personalizado</SelectItem>
                     </SelectContent>
                 </Select>
-            </div>
+                }
+            />
 
             {dateFilter === 'custom' && (
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -559,6 +559,6 @@ export default function Page() {
                     </div>
                 </>
             )}
-        </div>
+        </AdminPage>
     )
 }

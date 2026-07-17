@@ -23,6 +23,7 @@ import {
   Textarea,
 } from '@prodexy/ui'
 import { CalendarClock, Car, ChevronLeft, ChevronRight, Filter, Pencil, Plus, Save, Search, Wrench } from 'lucide-react'
+import { AdminPage, AdminPageHeader } from '@/components/admin-page'
 import { supabase } from '@/lib/supabaseClient'
 
 type ClienteRow = {
@@ -430,13 +431,11 @@ export default function Page() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Fidelização</h1>
-          <p className="text-muted-foreground">Acompanhe veículos, histórico de OS e próximas manutenções.</p>
-        </div>
-      </div>
+    <AdminPage>
+      <AdminPageHeader
+        title="Fidelização"
+        description="Acompanhe veículos, histórico de OS e próximas manutenções."
+      />
 
       <div className="grid gap-4 md:grid-cols-4">
         <SummaryCard title="Veículos monitorados" value={String(monitoredVehicles)} icon={Car} />
@@ -679,7 +678,7 @@ export default function Page() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </AdminPage>
   )
 }
 

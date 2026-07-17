@@ -23,6 +23,7 @@ import {
 } from '@prodexy/ui'
 import { Search, Wrench, Car, Plus, Pencil, Trash2, Camera, FileText, Printer, Filter, MoreHorizontal, Eye, Package, CalendarDays } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
+import { AdminPage, AdminPageHeader } from '@/components/admin-page'
 import { ListPagination } from '@/components/list-pagination'
 import { OrderDetailsDialog, type OrdemServicoDetails } from '@/components/order-details-dialog'
 import { printOrder } from '@/components/order-print'
@@ -535,21 +536,20 @@ export function OrdersPage({
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
-          <p className="text-muted-foreground">{description}</p>
-        </div>
-
-        <Button
-          className="gap-2"
-          onClick={() => router.push(`${basePath}/nova`)}
-        >
-          <Plus className="h-4 w-4" />
-          Nova OS
-        </Button>
-      </div>
+    <AdminPage>
+      <AdminPageHeader
+        title={title}
+        description={description}
+        actions={
+          <Button
+            className="gap-2"
+            onClick={() => router.push(`${basePath}/nova`)}
+          >
+            <Plus className="h-4 w-4" />
+            Nova OS
+          </Button>
+        }
+      />
 
       {!collaboratorMode && (
         <div className="grid gap-4 md:grid-cols-4">
@@ -723,7 +723,7 @@ export function OrdersPage({
       </Card>
 
       <OrderDetailsDialog open={detailsOpen} onOpenChange={setDetailsOpen} order={selectedOrder} />
-    </div>
+    </AdminPage>
   )
 }
 

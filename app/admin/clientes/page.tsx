@@ -26,6 +26,7 @@ import {
     Cake,
     ClipboardCheck,
 } from 'lucide-react'
+import { AdminPage, AdminPageHeader } from '@/components/admin-page'
 import { CustomerDialog } from '@/components/customer-dialog'
 import { ListPagination } from '@/components/list-pagination'
 import { supabase } from '@/lib/supabaseClient'
@@ -280,20 +281,17 @@ export default function Page() {
     }
 
     return (
-        <div className="space-y-6">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Clientes</h1>
-                    <p className="text-muted-foreground">
-                        Gerencie clientes, aniversários e histórico de compras.
-                    </p>
-                </div>
-
-                <Button onClick={handleNew} className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    Novo Cliente
-                </Button>
-            </div>
+        <AdminPage>
+            <AdminPageHeader
+                title="Clientes"
+                description="Gerencie clientes, aniversários e histórico de compras."
+                actions={
+                    <Button onClick={handleNew} className="gap-2">
+                        <Plus className="h-4 w-4" />
+                        Novo Cliente
+                    </Button>
+                }
+            />
 
             <div className="grid gap-4 md:grid-cols-3">
                 <Card>
@@ -497,7 +495,7 @@ export default function Page() {
                 customer={editingCustomer}
                 onSaved={loadCustomers}
             />
-        </div>
+        </AdminPage>
     )
 }
 

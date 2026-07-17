@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from '@prodexy/ui'
 import { Boxes, DollarSign, Filter, Minus, Package, Pencil, Plus, Search, Trash2 } from 'lucide-react'
+import { AdminPage, AdminPageHeader } from '@/components/admin-page'
 import { ListPagination } from '@/components/list-pagination'
 import { ProductDialog, type ProdutoRow } from '@/components/product-dialog'
 import { supabase } from '@/lib/supabaseClient'
@@ -158,23 +159,23 @@ export default function Page() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Produtos</h1>
-          <p className="text-muted-foreground">Controle o catálogo de produtos e ajuste o estoque da loja.</p>
-        </div>
-        <Button
-          onClick={() => {
-            setSelectedProduto(null)
-            setDialogOpen(true)
-          }}
-          className="gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          Novo produto
-        </Button>
-      </div>
+    <AdminPage>
+      <AdminPageHeader
+        title="Produtos"
+        description="Controle o catálogo de produtos e ajuste o estoque da loja."
+        actions={
+          <Button
+            onClick={() => {
+              setSelectedProduto(null)
+              setDialogOpen(true)
+            }}
+            className="gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Novo produto
+          </Button>
+        }
+      />
 
       <div className="grid gap-4 md:grid-cols-3">
         <SummaryCard title="Total de produtos" value={String(totalProdutos)} icon={Package} />
@@ -311,7 +312,7 @@ export default function Page() {
       </Card>
 
       <ProductDialog open={dialogOpen} onOpenChange={setDialogOpen} produto={selectedProduto} onSaved={loadProdutos} />
-    </div>
+    </AdminPage>
   )
 }
 

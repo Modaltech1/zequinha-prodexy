@@ -23,6 +23,7 @@ import {
   Textarea,
 } from '@prodexy/ui'
 import { CalendarDays, Gift, Pencil, Plus, Shuffle, Trash2, Trophy, Users } from 'lucide-react'
+import { AdminPage, AdminPageHeader } from '@/components/admin-page'
 import { supabase } from '@/lib/supabaseClient'
 
 type ClienteRow = {
@@ -311,17 +312,17 @@ export default function Page() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Eventos</h1>
-          <p className="text-muted-foreground">Crie eventos, filtre clientes participantes e realize sorteios.</p>
-        </div>
-        <Button className="gap-2" onClick={openNew}>
-          <Plus className="h-4 w-4" />
-          Novo evento
-        </Button>
-      </div>
+    <AdminPage>
+      <AdminPageHeader
+        title="Eventos"
+        description="Crie eventos, filtre clientes participantes e realize sorteios."
+        actions={
+          <Button className="gap-2" onClick={openNew}>
+            <Plus className="h-4 w-4" />
+            Novo evento
+          </Button>
+        }
+      />
 
       <div className="grid gap-4 md:grid-cols-3">
         <SummaryCard title="Eventos" value={String(events.length)} icon={CalendarDays} />
@@ -501,7 +502,7 @@ export default function Page() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </AdminPage>
   )
 }
 

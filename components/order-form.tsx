@@ -51,7 +51,9 @@ type CollaboratorOption = {
 export type OrdemServicoEdit = {
   id: string
   numero: string | null
+  cliente?: ClienteOption | null
   cliente_id: string | null
+  veiculo?: VeiculoOption | null
   veiculo_id?: string | null
   veiculo_placa: string | null
   veiculo_marca: string | null
@@ -157,6 +159,7 @@ function mergeById<T extends { id: string }>(items: T[], item: T | null) {
 }
 
 function buildOrderVehicleOption(order: OrdemServicoEdit | null): VeiculoOption | null {
+  if (order?.veiculo) return order.veiculo
   if (!order?.veiculo_id) return null
 
   return {
@@ -385,7 +388,7 @@ export function OrderForm({
   const [newFiles, setNewFiles] = useState<File[]>([])
   const [previewUrls, setPreviewUrls] = useState<string[]>([])
 
-  async function loadBaseData(selectedClienteId?: string | null) {
+  async function loadBaseData(selectedClienteId?: string | null, selectedCliente?: ClienteOption | null) {
     const [clientesRes, servicosRes, produtosRes, colaboradoresRes] = await Promise.all([
       supabase.from('clientes').select('id, nome, cpf_cnpj, telefone, email, cidade, bairro, nascimento, whatsapp_opt_in').order('nome', { ascending: true }),
       supabase.from('servicos').select('id, nome, is_periodico, periodicidade_meses').order('nome', { ascending: true }),
@@ -398,7 +401,7 @@ export function OrderForm({
     if (produtosRes.error) console.error('Erro ao carregar produtos:', produtosRes.error)
     if (colaboradoresRes.error) console.error('Erro ao carregar colaboradores:', colaboradoresRes.error)
 
-    let clientesList = (clientesRes.data as ClienteOption[]) || []
+    let clientesList = mergeById((clientesRes.data as ClienteOption[]) || [], selectedCliente || null)
 
     if (selectedClienteId && !clientesList.some((cliente) => cliente.id === selectedClienteId)) {
       const { data: selectedCliente, error: selectedClienteError } = await supabase
@@ -453,8 +456,8 @@ export function OrderForm({
   }
 
   useEffect(() => {
-    loadBaseData(order?.cliente_id || null)
-  }, [order?.cliente_id])
+    loadBaseData(order?.cliente_id || null, order?.cliente || null)
+  }, [order?.cliente_id, order?.cliente])
 
   useEffect(() => {
     loadVehiclesByCustomer(clienteId, order)

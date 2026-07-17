@@ -59,6 +59,18 @@ type Servico = {
   periodicidade_meses?: number | null
 }
 
+type ClienteRow = {
+  id: string
+  nome: string | null
+  cpf_cnpj?: string | null
+  telefone?: string | null
+  email?: string | null
+  cidade?: string | null
+  bairro?: string | null
+  nascimento?: string | null
+  whatsapp_opt_in?: boolean | null
+}
+
 type Produto = {
   id: string
   nome: string
@@ -112,6 +124,27 @@ function getPlateVariants(value: string | null | undefined) {
   )
 }
 
+function normalizeOrderStatus(status: string | null | undefined) {
+  const normalized = String(status || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '_')
+
+  const aliases: Record<string, string> = {
+    andamento: 'em_andamento',
+    em_andamento: 'em_andamento',
+    aberta: 'aberta',
+    aberto: 'aberta',
+    agendada: 'agendada',
+    agendado: 'agendada',
+    finalizada: 'finalizada',
+    finalizado: 'finalizada',
+    cancelada: 'cancelada',
+    cancelado: 'cancelada',
+  }
+
+  return aliases[normalized] || 'em_andamento'
+}
 async function findVehicleForOrder(row: OrdemRow): Promise<VeiculoRow | null> {
   if (row.veiculo_id) {
     const { data, error } = await supabase
@@ -248,6 +281,33 @@ export function OrderEditorPage({
 
 
       const veiculoFallback = await findVehicleForOrder(row)
+      const finalClienteId = row.cliente_id || veiculoFallback?.cliente_id || null
+      const selectedClienteRes = finalClienteId
+        ? await supabase
+          .from('clientes')
+          .select('id,nome,cpf_cnpj,telefone,email,cidade,bairro,nascimento,whatsapp_opt_in')
+          .eq('id', finalClienteId)
+          .maybeSingle()
+        : { data: null, error: null }
+
+      if (selectedClienteRes.error) {
+        console.error('Erro ao buscar cliente da OS para edição:', selectedClienteRes.error)
+      }
+
+      const selectedCliente = (selectedClienteRes.data as ClienteRow | null) || null
+      const selectedVehicle = veiculoFallback
+        ? {
+          id: veiculoFallback.id,
+          cliente_id: veiculoFallback.cliente_id || finalClienteId || '',
+          placa: veiculoFallback.placa,
+          marca: veiculoFallback.marca,
+          modelo: veiculoFallback.modelo,
+          ano: veiculoFallback.ano,
+          cor: veiculoFallback.cor,
+          km_atual: veiculoFallback.km_atual ?? null,
+          tem_seguro: veiculoFallback.tem_seguro ?? null,
+        }
+        : null
 
       console.log('[OS EDIT] Dados resolvidos para edição:', {
         os_id: row.id,
@@ -270,7 +330,9 @@ export function OrderEditorPage({
       const mapped: OrdemServicoEdit = {
         id: row.id,
         numero: row.numero,
-        cliente_id: row.cliente_id || veiculoFallback?.cliente_id || null,
+        cliente: selectedCliente,
+        cliente_id: finalClienteId,
+        veiculo: selectedVehicle,
         veiculo_id: row.veiculo_id || veiculoFallback?.id || null,
         veiculo_placa: row.veiculo_placa || veiculoFallback?.placa || null,
         veiculo_marca: row.veiculo_marca || veiculoFallback?.marca || null,
@@ -280,7 +342,7 @@ export function OrderEditorPage({
         veiculo_tem_seguro: typeof row.veiculo_tem_seguro === 'boolean' ? row.veiculo_tem_seguro : Boolean(veiculoFallback?.tem_seguro),
         valor_total: Number(row.valor_total || 0),
         valor_final: Number(row.valor_final || 0),
-        status: row.status,
+        status: normalizeOrderStatus(row.status),
         observacoes: row.observacoes,
         criado_em: row.criado_em,
         atualizado_em: row.atualizado_em,
@@ -350,6 +412,18 @@ export function OrderEditorPage({
           Voltar para ordens
         </Button>
         <p className="text-sm text-destructive">{loadError}</p>
+      </div>
+    )
+  }
+
+  if (effectiveOrderId && !order) {
+    return (
+      <div className="space-y-4">
+        <Button variant="outline" className="gap-2" onClick={() => router.push(basePath)}>
+          <ArrowLeft className="h-4 w-4" />
+          Voltar para ordens
+        </Button>
+        <p className="text-sm text-destructive">Não foi possível montar os dados desta OS para edição.</p>
       </div>
     )
   }

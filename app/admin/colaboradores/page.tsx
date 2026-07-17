@@ -18,6 +18,7 @@ import {
   Label
 } from '@prodexy/ui'
 import { Plus, Pencil } from 'lucide-react'
+import { AdminPage, AdminPageHeader } from '@/components/admin-page'
 import { supabase } from '@/lib/supabaseClient'
 
 type Collaborator = {
@@ -138,17 +139,17 @@ export default function Page() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Colaboradores</h1>
-          <p className="text-muted-foreground">Sublogins reais do sistema para os entregadores.</p>
-        </div>
-        <Button className="gap-2" onClick={openNew}>
-          <Plus className="h-4 w-4" />
-          Novo colaborador
-        </Button>
-      </div>
+    <AdminPage>
+      <AdminPageHeader
+        title="Colaboradores"
+        description="Sublogins reais do sistema para os entregadores."
+        actions={
+          <Button className="gap-2" onClick={openNew}>
+            <Plus className="h-4 w-4" />
+            Novo colaborador
+          </Button>
+        }
+      />
 
       <Card>
         <CardHeader>
@@ -229,6 +230,6 @@ export default function Page() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </AdminPage>
   )
 }
