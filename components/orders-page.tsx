@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -8,7 +8,6 @@ import {
   Card,
   CardContent,
   CardHeader,
-  Input,
   Select,
   SelectContent,
   SelectItem,
@@ -21,10 +20,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@prodexy/ui'
-import { Search, Wrench, Car, Plus, Pencil, Trash2, Camera, FileText, Printer, Filter, MoreHorizontal, Eye, Package, CalendarDays } from 'lucide-react'
+import { Wrench, Car, Plus, Pencil, Trash2, Camera, FileText, Printer, Filter, MoreHorizontal, Eye, Package, CalendarDays } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
 import { AdminPage, AdminPageHeader } from '@/components/admin-page'
 import { ListPagination } from '@/components/list-pagination'
+import { ListFilterGroup, ListSearch, ListState, ListToolbar } from '@/components/list-toolbar'
 import { OrderDetailsDialog, type OrdemServicoDetails } from '@/components/order-details-dialog'
 import { printOrder } from '@/components/order-print'
 import { formatOsNumber } from '@/lib/format-os-number'
@@ -165,8 +165,8 @@ function getPeriodRange(filter: PeriodFilter) {
 }
 
 export function OrdersPage({
-  title = 'Ordens de Serviço',
-  description = 'Cadastre, acompanhe e consulte as ordens de serviço da operação.',
+  title = 'Ordens de ServiÃ§o',
+  description = 'Cadastre, acompanhe e consulte as ordens de serviÃ§o da operaÃ§Ã£o.',
   collaboratorMode = false,
 }: OrdersPageProps) {
   const router = useRouter()
@@ -419,7 +419,7 @@ export function OrdersPage({
     const responsavel = order.responsavel_id ? collaborators[order.responsavel_id] : undefined
     const itens = (serviceRowsByOrder[order.id] || []).map((item) => ({
       id: item.id,
-      nome: services[item.servico_id]?.nome || 'Serviço não identificado',
+      nome: services[item.servico_id]?.nome || 'ServiÃ§o nÃ£o identificado',
       is_periodico: services[item.servico_id]?.is_periodico,
       periodicidade_meses: services[item.servico_id]?.periodicidade_meses,
       valor: Number(item.valor || 0),
@@ -429,7 +429,7 @@ export function OrdersPage({
     }))
     const produtosDaOs = (productRowsByOrder[order.id] || []).map((item) => ({
       id: item.id,
-      nome: products[item.produto_id]?.nome || 'Produto não identificado',
+      nome: products[item.produto_id]?.nome || 'Produto nÃ£o identificado',
       marca_modelo: products[item.produto_id]?.marca_modelo || null,
       codigo: item.codigo_produto || products[item.produto_id]?.codigo || null,
       valor_unitario: Number(item.valor_unitario || 0),
@@ -446,7 +446,7 @@ export function OrdersPage({
       observacoes: order.observacoes,
       criado_em: order.criado_em,
       atualizado_em: order.atualizado_em,
-      cliente_nome: customer?.nome || 'Cliente não identificado',
+      cliente_nome: customer?.nome || 'Cliente nÃ£o identificado',
       cliente_telefone: customer?.telefone || '',
       cliente_cpf_cnpj: customer?.cpf_cnpj || '',
       veiculo_placa: vehicle?.placa || order.veiculo_placa,
@@ -562,21 +562,17 @@ export function OrdersPage({
 
       <Card>
         <CardHeader>
-          <div className="space-y-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchTerm}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                  setSearchTerm(e.target.value)
-                  setCurrentPage(1)
-                }}
-                className="pl-9"
-                placeholder="Buscar por número, CPF, cliente, placa, marca ou modelo..."
-              />
-            </div>
+          <ListToolbar>
+            <ListSearch
+              value={searchTerm}
+              onChange={(value) => {
+                setSearchTerm(value)
+                setCurrentPage(1)
+              }}
+              placeholder="Buscar por nÃºmero, CPF, cliente, placa, marca ou modelo..."
+            />
 
-            <div className="flex flex-col gap-2 sm:flex-row">
+            <ListFilterGroup>
               <Select
                 value={statusFilter}
                 onValueChange={(value: string) => {
@@ -608,27 +604,31 @@ export function OrdersPage({
               >
                 <SelectTrigger className="w-full sm:w-[220px]">
                   <CalendarDays className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="Filtrar por período..." />
+                  <SelectValue placeholder="Filtrar por perÃ­odo..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="todos">Todos os períodos</SelectItem>
+                  <SelectItem value="todos">Todos os perÃ­odos</SelectItem>
                   <SelectItem value="hoje">Dia atual</SelectItem>
                   <SelectItem value="semana">Semana atual</SelectItem>
-                  <SelectItem value="mes">Mês atual</SelectItem>
+                  <SelectItem value="mes">MÃªs atual</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-          </div>
+            </ListFilterGroup>
+          </ListToolbar>
         </CardHeader>
 
         <CardContent className="space-y-3">
-          {loading && <p className="text-sm text-muted-foreground">Carregando ordens de serviço...</p>}
-          {!loading && filteredOrders.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma ordem de serviço encontrada.</p>}
+          <ListState
+            loading={loading}
+            loadingText="Carregando ordens de serviÃ§o..."
+            empty={!loading && filteredOrders.length === 0}
+            emptyText="Nenhuma ordem de serviÃ§o encontrada."
+          />
 
           {paginatedOrders.map((order) => {
             const customer = order.cliente_id ? customers[order.cliente_id] : undefined
             const vehicle = order.veiculo_id ? vehicles[order.veiculo_id] : undefined
-            const vehicleLabel = `${vehicle?.marca || order.veiculo_marca || '-'} ${vehicle?.modelo || order.veiculo_modelo || ''} ${(vehicle?.placa || order.veiculo_placa) ? `• ${vehicle?.placa || order.veiculo_placa}` : ''}`
+            const vehicleLabel = `${vehicle?.marca || order.veiculo_marca || '-'} ${vehicle?.modelo || order.veiculo_modelo || ''} ${(vehicle?.placa || order.veiculo_placa) ? `â€¢ ${vehicle?.placa || order.veiculo_placa}` : ''}`
             const itemCount = (serviceRowsByOrder[order.id] || []).length
             const productsCount = (productRowsByOrder[order.id] || []).length
             const photosCount = (photosByOrder[order.id] || []).length
@@ -648,15 +648,15 @@ export function OrdersPage({
 
                     <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-2 xl:grid-cols-3">
                       <InfoLine icon={Car} text={vehicleLabel} />
-                      <InfoLine icon={Wrench} text={`${itemCount} serviço(s)`} />
+                      <InfoLine icon={Wrench} text={`${itemCount} serviÃ§o(s)`} />
                       <InfoLine icon={Package} text={`${productsCount} produto(s)`} />
-                      <InfoLine icon={FileText} text={`${diagnosticsCount} diagnóstico(s)`} />
+                      <InfoLine icon={FileText} text={`${diagnosticsCount} diagnÃ³stico(s)`} />
                       <InfoLine icon={Camera} text={`${photosCount} foto(s)`} />
-                      <p><span className="font-medium text-foreground">Cliente:</span> {customer?.nome || 'Cliente não identificado'}</p>
+                      <p><span className="font-medium text-foreground">Cliente:</span> {customer?.nome || 'Cliente nÃ£o identificado'}</p>
                       <p><span className="font-medium text-foreground">Valor:</span> R$ {Number(order.valor_final || order.valor_total || 0).toFixed(2)}</p>
                       <p><span className="font-medium text-foreground">KM entrada:</span> {order.km_entrada ?? '-'}</p>
                       <p><span className="font-medium text-foreground">Criado em:</span> {new Date(order.criado_em).toLocaleDateString('pt-BR')}</p>
-                      <p><span className="font-medium text-foreground">Seguro:</span> {(vehicle?.tem_seguro || order.veiculo_tem_seguro) ? 'Sim' : 'Não'}</p>
+                      <p><span className="font-medium text-foreground">Seguro:</span> {(vehicle?.tem_seguro || order.veiculo_tem_seguro) ? 'Sim' : 'NÃ£o'}</p>
                     </div>
                   </div>
 

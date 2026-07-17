@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useMemo, useState } from 'react'
 import {
@@ -7,16 +7,16 @@ import {
   Card,
   CardContent,
   CardHeader,
-  Input,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@prodexy/ui'
-import { Boxes, DollarSign, Filter, Minus, Package, Pencil, Plus, Search, Trash2 } from 'lucide-react'
+import { Boxes, DollarSign, Filter, Minus, Package, Pencil, Plus, Trash2 } from 'lucide-react'
 import { AdminPage, AdminPageHeader } from '@/components/admin-page'
 import { ListPagination } from '@/components/list-pagination'
+import { ListFilterGroup, ListSearch, ListState, ListToolbar } from '@/components/list-toolbar'
 import { ProductDialog, type ProdutoRow } from '@/components/product-dialog'
 import { supabase } from '@/lib/supabaseClient'
 
@@ -162,7 +162,7 @@ export default function Page() {
     <AdminPage>
       <AdminPageHeader
         title="Produtos"
-        description="Controle o catálogo de produtos e ajuste o estoque da loja."
+        description="Controle o catÃ¡logo de produtos e ajuste o estoque da loja."
         actions={
           <Button
             onClick={() => {
@@ -185,21 +185,17 @@ export default function Page() {
 
       <Card>
         <CardHeader>
-          <div className="space-y-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchTerm}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                  setSearchTerm(e.target.value)
-                  setCurrentPage(1)
-                }}
-                className="pl-9"
-                placeholder="Buscar produto por nome, marca/modelo ou código..."
-              />
-            </div>
+          <ListToolbar>
+            <ListSearch
+              value={searchTerm}
+              onChange={(value) => {
+                setSearchTerm(value)
+                setCurrentPage(1)
+              }}
+              placeholder="Buscar produto por nome, marca/modelo ou cÃ³digo..."
+            />
 
-            <div className="flex flex-col gap-2 sm:flex-row">
+            <ListFilterGroup>
               <Select
                 value={sortBy}
                 onValueChange={(value: string) => {
@@ -219,12 +215,16 @@ export default function Page() {
                   <SelectItem value="valor-menor">Menor valor</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-          </div>
+            </ListFilterGroup>
+          </ListToolbar>
         </CardHeader>
         <CardContent className="space-y-3">
-          {loading && <p className="text-sm text-muted-foreground">Carregando produtos...</p>}
-          {!loading && filteredProdutos.length === 0 && <p className="text-sm text-muted-foreground">Nenhum produto encontrado.</p>}
+          <ListState
+            loading={loading}
+            loadingText="Carregando produtos..."
+            empty={!loading && filteredProdutos.length === 0}
+            emptyText="Nenhum produto encontrado."
+          />
 
           {paginatedProdutos.map((produto) => {
             const rowUpdating = stockUpdatingId === produto.id
@@ -242,8 +242,8 @@ export default function Page() {
                       {produto.marca_modelo && <Badge variant="secondary">{produto.marca_modelo}</Badge>}
                     </div>
                     <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                      <span>Código: {produto.codigo || '-'}</span>
-                      <span>Unitário: {formatCurrency(produto.valor_unitario)}</span>
+                      <span>CÃ³digo: {produto.codigo || '-'}</span>
+                      <span>UnitÃ¡rio: {formatCurrency(produto.valor_unitario)}</span>
                       <span>Total: {formatCurrency(itemTotal)}</span>
                     </div>
                   </div>

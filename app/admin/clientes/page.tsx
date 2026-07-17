@@ -1,4 +1,4 @@
-// app/admin/clientes/page.tsx
+﻿// app/admin/clientes/page.tsx
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
@@ -7,7 +7,6 @@ import {
     Card,
     CardContent,
     CardHeader,
-    Input,
     Select,
     SelectContent,
     SelectItem,
@@ -16,7 +15,6 @@ import {
 } from '@prodexy/ui'
 import {
     Plus,
-    Search,
     Pencil,
     Trash2,
     Phone,
@@ -29,6 +27,7 @@ import {
 import { AdminPage, AdminPageHeader } from '@/components/admin-page'
 import { CustomerDialog } from '@/components/customer-dialog'
 import { ListPagination } from '@/components/list-pagination'
+import { ListFilterGroup, ListSearch, ListState, ListToolbar } from '@/components/list-toolbar'
 import { supabase } from '@/lib/supabaseClient'
 
 type BirthdayFilter =
@@ -275,7 +274,7 @@ export default function Page() {
         } catch (err: any) {
             console.error('Erro ao excluir cliente', err)
             alert(
-                'Erro ao excluir cliente. Ele pode ter ordens de serviço vinculadas. Se preferir, mantenha o cadastro e apenas pare de utilizá-lo.',
+                'Erro ao excluir cliente. Ele pode ter ordens de serviÃ§o vinculadas. Se preferir, mantenha o cadastro e apenas pare de utilizÃ¡-lo.',
             )
         }
     }
@@ -284,7 +283,7 @@ export default function Page() {
         <AdminPage>
             <AdminPageHeader
                 title="Clientes"
-                description="Gerencie clientes, aniversários e histórico de compras."
+                description="Gerencie clientes, aniversÃ¡rios e histÃ³rico de compras."
                 actions={
                     <Button onClick={handleNew} className="gap-2">
                         <Plus className="h-4 w-4" />
@@ -306,7 +305,7 @@ export default function Page() {
 
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <p className="text-sm font-medium text-muted-foreground">Aniversários</p>
+                        <p className="text-sm font-medium text-muted-foreground">AniversÃ¡rios</p>
                         <Cake className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
@@ -327,31 +326,21 @@ export default function Page() {
 
             <Card>
                 <CardHeader>
-                    <div className="space-y-3">
+                    <ListToolbar>
                         {error && (
-                            <p className="text-sm text-destructive">{error}</p>
+                            <p className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{error}</p>
                         )}
 
-                        {loading && (
-                            <p className="text-sm text-muted-foreground">
-                                Carregando clientes...
-                            </p>
-                        )}
+                        <ListSearch
+                            placeholder="Buscar por nome, telefone, CPF ou aniversÃ¡rio..."
+                            value={searchTerm}
+                            onChange={(value) => {
+                                setSearchTerm(value)
+                                setCurrentPage(1)
+                            }}
+                        />
 
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                            <Input
-                                placeholder="Buscar por nome, telefone, CPF ou aniversário..."
-                                className="pl-9"
-                                value={searchTerm}
-                                onChange={(e) => {
-                                    setSearchTerm(e.target.value)
-                                    setCurrentPage(1)
-                                }}
-                            />
-                        </div>
-
-                        <div className="flex flex-col gap-2 sm:flex-row">
+                        <ListFilterGroup>
                             <Select
                                 value={filterType}
                                 onValueChange={(value) => {
@@ -361,15 +350,15 @@ export default function Page() {
                             >
                                 <SelectTrigger className="w-full sm:w-[260px]">
                                     <Filter className="mr-2 h-4 w-4" />
-                                    <SelectValue placeholder="Filtrar aniversário..." />
+                                    <SelectValue placeholder="Filtrar aniversÃ¡rio..." />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">Todos os clientes</SelectItem>
                                     <SelectItem value="birthday-today">Aniversariantes de hoje</SelectItem>
-                                    <SelectItem value="birthday-current-month">Aniversariantes deste mês</SelectItem>
-                                    <SelectItem value="birthday-next-month">Aniversariantes do próximo mês</SelectItem>
-                                    <SelectItem value="birthday-next-30-days">Próximos 30 dias</SelectItem>
-                                    <SelectItem value="without-birthday">Sem aniversário cadastrado</SelectItem>
+                                    <SelectItem value="birthday-current-month">Aniversariantes deste mÃªs</SelectItem>
+                                    <SelectItem value="birthday-next-month">Aniversariantes do prÃ³ximo mÃªs</SelectItem>
+                                    <SelectItem value="birthday-next-30-days">PrÃ³ximos 30 dias</SelectItem>
+                                    <SelectItem value="without-birthday">Sem aniversÃ¡rio cadastrado</SelectItem>
                                 </SelectContent>
                             </Select>
 
@@ -387,21 +376,22 @@ export default function Page() {
                                     <SelectItem value="name">Nome (A-Z)</SelectItem>
                                     <SelectItem value="purchases-high">Maior total de compras</SelectItem>
                                     <SelectItem value="purchases-low">Menor total de compras</SelectItem>
-                                    <SelectItem value="birthday-next">Aniversário mais próximo</SelectItem>
-                                    <SelectItem value="birthday-date">Data de aniversário</SelectItem>
+                                    <SelectItem value="birthday-next">AniversÃ¡rio mais prÃ³ximo</SelectItem>
+                                    <SelectItem value="birthday-date">Data de aniversÃ¡rio</SelectItem>
                                 </SelectContent>
                             </Select>
-                        </div>
-                    </div>
+                        </ListFilterGroup>
+                    </ListToolbar>
                 </CardHeader>
 
                 <CardContent>
                     <div className="space-y-3">
-                        {!loading && paginatedCustomers.length === 0 && (
-                            <p className="text-sm text-muted-foreground">
-                                Nenhum cliente encontrado com os filtros atuais.
-                            </p>
-                        )}
+                        <ListState
+                            loading={loading}
+                            loadingText="Carregando clientes..."
+                            empty={!loading && paginatedCustomers.length === 0}
+                            emptyText="Nenhum cliente encontrado com os filtros atuais."
+                        />
 
                         {paginatedCustomers.map((customer) => {
                             const nextBirthday = getNextBirthday(customer.nascimento)
@@ -439,7 +429,7 @@ export default function Page() {
                                                 <div className="text-xs">
                                                     {customer.whatsapp_opt_in
                                                         ? 'WhatsApp autorizado'
-                                                        : 'WhatsApp não autorizado'}
+                                                        : 'WhatsApp nÃ£o autorizado'}
                                                 </div>
                                             </div>
                                         </div>
@@ -454,7 +444,7 @@ export default function Page() {
                                         </div>
 
                                         <div className="text-left lg:text-right">
-                                            <p className="text-xs text-muted-foreground">Aniversário</p>
+                                            <p className="text-xs text-muted-foreground">AniversÃ¡rio</p>
                                             <p className="text-sm font-semibold">
                                                 {formatBirthDate(customer.nascimento)}
                                             </p>
@@ -564,7 +554,7 @@ function getBirthDateParts(value: string | null) {
 
 function formatBirthDate(value: string | null) {
     const parts = getBirthDateParts(value)
-    if (!parts) return 'Não informado'
+    if (!parts) return 'NÃ£o informado'
 
     return `${String(parts.day).padStart(2, '0')}/${String(parts.month).padStart(2, '0')}`
 }
