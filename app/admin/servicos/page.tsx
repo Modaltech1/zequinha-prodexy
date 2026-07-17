@@ -41,13 +41,13 @@ export default function Page() {
     ])
 
     if (servicosRes.error) {
-      console.error('Erro ao carregar serviÃ§os:', servicosRes.error)
+      console.error('Erro ao carregar serviços:', servicosRes.error)
       setServicos([])
       setLoading(false)
       return
     }
 
-    if (ordemServicosRes.error) console.error('Erro ao carregar uso de serviÃ§os:', ordemServicosRes.error)
+    if (ordemServicosRes.error) console.error('Erro ao carregar uso de serviços:', ordemServicosRes.error)
 
     const usage = ((ordemServicosRes.data || []) as { servico_id: string }[]).reduce<Record<string, number>>((acc, item) => {
       acc[item.servico_id] = (acc[item.servico_id] || 0) + 1
@@ -90,13 +90,13 @@ export default function Page() {
   const totalVinculos = Object.values(usageByService).reduce((sum: number, count) => sum + Number(count), 0)
 
   async function handleDelete(servico: ServicoRow) {
-    const confirmed = window.confirm(`Deseja excluir o serviÃ§o "${servico.nome}"?`)
+    const confirmed = window.confirm(`Deseja excluir o serviço "${servico.nome}"?`)
     if (!confirmed) return
 
     const { error } = await supabase.from('servicos').delete().eq('id', servico.id)
     if (error) {
-      console.error('Erro ao excluir serviÃ§o:', error)
-      alert('Erro ao excluir serviÃ§o. Ele pode estar vinculado a uma OS.')
+      console.error('Erro ao excluir serviço:', error)
+      alert('Erro ao excluir serviço. Ele pode estar vinculado a uma OS.')
       return
     }
 
@@ -106,8 +106,8 @@ export default function Page() {
   return (
     <AdminPage>
       <AdminPageHeader
-        title="ServiÃ§os"
-        description="Cadastre o catÃ¡logo de serviÃ§os e configure quais geram manutenÃ§Ã£o periÃ³dica."
+        title="Serviços"
+        description="Cadastre o catálogo de serviços e configure quais geram manutenção periódica."
         actions={
           <Button
             onClick={() => {
@@ -117,15 +117,15 @@ export default function Page() {
             className="gap-2"
           >
             <Plus className="h-4 w-4" />
-            Novo serviÃ§o
+            Novo serviço
           </Button>
         }
       />
 
       <div className="grid gap-4 md:grid-cols-3">
-        <SummaryCard title="Total de serviÃ§os" value={String(totalServicos)} icon={Package} />
-        <SummaryCard title="ServiÃ§os periÃ³dicos" value={String(servicosPeriodicos)} icon={Wrench} />
-        <SummaryCard title="VÃ­nculos em ordens" value={String(totalVinculos)} icon={Wrench} />
+        <SummaryCard title="Total de serviços" value={String(totalServicos)} icon={Package} />
+        <SummaryCard title="Serviços periódicos" value={String(servicosPeriodicos)} icon={Wrench} />
+        <SummaryCard title="Vínculos em ordens" value={String(totalVinculos)} icon={Wrench} />
       </div>
 
       <Card>
@@ -137,7 +137,7 @@ export default function Page() {
                 setSearchTerm(value)
                 setCurrentPage(1)
               }}
-              placeholder="Buscar serviÃ§o por nome..."
+              placeholder="Buscar serviço por nome..."
             />
 
             <ListFilterGroup>
@@ -147,9 +147,9 @@ export default function Page() {
                   <SelectValue placeholder="Filtrar por..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos os serviÃ§os</SelectItem>
-                  <SelectItem value="periodic">PeriÃ³dicos</SelectItem>
-                  <SelectItem value="not-periodic">NÃ£o periÃ³dicos</SelectItem>
+                  <SelectItem value="all">Todos os serviços</SelectItem>
+                  <SelectItem value="periodic">Periódicos</SelectItem>
+                  <SelectItem value="not-periodic">Não periódicos</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -169,9 +169,9 @@ export default function Page() {
         <CardContent className="space-y-3">
           <ListState
             loading={loading}
-            loadingText="Carregando serviÃ§os..."
+            loadingText="Carregando serviços..."
             empty={!loading && filteredServicos.length === 0}
-            emptyText="Nenhum serviÃ§o encontrado."
+            emptyText="Nenhum serviço encontrado."
           />
 
           {paginatedServicos.map((servico) => (
@@ -184,12 +184,12 @@ export default function Page() {
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="text-base font-semibold leading-tight text-foreground">{servico.nome}</p>
                     {servico.is_periodico ? (
-                      <Badge variant="secondary">PeriÃ³dico â€¢ {servico.periodicidade_meses || 0} mÃªs(es)</Badge>
+                      <Badge variant="secondary">Periódico • {servico.periodicidade_meses || 0} mês(es)</Badge>
                     ) : (
-                      <Badge variant="secondary">NÃ£o periÃ³dico</Badge>
+                      <Badge variant="secondary">Não periódico</Badge>
                     )}
                   </div>
-                  <p className="text-sm text-muted-foreground">{usageByService[servico.id] || 0} vÃ­nculo(s) em ordens de serviÃ§o</p>
+                  <p className="text-sm text-muted-foreground">{usageByService[servico.id] || 0} vínculo(s) em ordens de serviço</p>
                 </div>
               </div>
 

@@ -162,7 +162,7 @@ export default function Page() {
     <AdminPage>
       <AdminPageHeader
         title="Produtos"
-        description="Controle o catÃ¡logo de produtos e ajuste o estoque da loja."
+        description="Controle o catálogo de produtos e ajuste o estoque da loja."
         actions={
           <Button
             onClick={() => {
@@ -192,7 +192,7 @@ export default function Page() {
                 setSearchTerm(value)
                 setCurrentPage(1)
               }}
-              placeholder="Buscar produto por nome, marca/modelo ou cÃ³digo..."
+              placeholder="Buscar produto por nome, marca/modelo ou código..."
             />
 
             <ListFilterGroup>
@@ -242,8 +242,8 @@ export default function Page() {
                       {produto.marca_modelo && <Badge variant="secondary">{produto.marca_modelo}</Badge>}
                     </div>
                     <div className="grid gap-1.5 text-sm text-muted-foreground sm:grid-cols-3">
-                      <span>CÃ³digo: {produto.codigo || '-'}</span>
-                      <span>UnitÃ¡rio: {formatCurrency(produto.valor_unitario)}</span>
+                      <span>Código: {produto.codigo || '-'}</span>
+                      <span>Unitário: {formatCurrency(produto.valor_unitario)}</span>
                       <span>Total: {formatCurrency(itemTotal)}</span>
                     </div>
                   </div>

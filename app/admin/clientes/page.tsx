@@ -274,7 +274,7 @@ export default function Page() {
         } catch (err: any) {
             console.error('Erro ao excluir cliente', err)
             alert(
-                'Erro ao excluir cliente. Ele pode ter ordens de serviÃ§o vinculadas. Se preferir, mantenha o cadastro e apenas pare de utilizÃ¡-lo.',
+                'Erro ao excluir cliente. Ele pode ter ordens de serviço vinculadas. Se preferir, mantenha o cadastro e apenas pare de utilizá-lo.',
             )
         }
     }
@@ -283,7 +283,7 @@ export default function Page() {
         <AdminPage>
             <AdminPageHeader
                 title="Clientes"
-                description="Gerencie clientes, aniversÃ¡rios e histÃ³rico de compras."
+                description="Gerencie clientes, aniversários e histórico de compras."
                 actions={
                     <Button onClick={handleNew} className="gap-2">
                         <Plus className="h-4 w-4" />
@@ -305,7 +305,7 @@ export default function Page() {
 
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <p className="text-sm font-medium text-muted-foreground">AniversÃ¡rios</p>
+                        <p className="text-sm font-medium text-muted-foreground">Aniversários</p>
                         <Cake className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
@@ -332,7 +332,7 @@ export default function Page() {
                         )}
 
                         <ListSearch
-                            placeholder="Buscar por nome, telefone, CPF ou aniversÃ¡rio..."
+                            placeholder="Buscar por nome, telefone, CPF ou aniversário..."
                             value={searchTerm}
                             onChange={(value) => {
                                 setSearchTerm(value)
@@ -350,15 +350,15 @@ export default function Page() {
                             >
                                 <SelectTrigger className="w-full sm:w-[260px]">
                                     <Filter className="mr-2 h-4 w-4" />
-                                    <SelectValue placeholder="Filtrar aniversÃ¡rio..." />
+                                    <SelectValue placeholder="Filtrar aniversário..." />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">Todos os clientes</SelectItem>
                                     <SelectItem value="birthday-today">Aniversariantes de hoje</SelectItem>
-                                    <SelectItem value="birthday-current-month">Aniversariantes deste mÃªs</SelectItem>
-                                    <SelectItem value="birthday-next-month">Aniversariantes do prÃ³ximo mÃªs</SelectItem>
-                                    <SelectItem value="birthday-next-30-days">PrÃ³ximos 30 dias</SelectItem>
-                                    <SelectItem value="without-birthday">Sem aniversÃ¡rio cadastrado</SelectItem>
+                                    <SelectItem value="birthday-current-month">Aniversariantes deste mês</SelectItem>
+                                    <SelectItem value="birthday-next-month">Aniversariantes do próximo mês</SelectItem>
+                                    <SelectItem value="birthday-next-30-days">Próximos 30 dias</SelectItem>
+                                    <SelectItem value="without-birthday">Sem aniversário cadastrado</SelectItem>
                                 </SelectContent>
                             </Select>
 
@@ -376,8 +376,8 @@ export default function Page() {
                                     <SelectItem value="name">Nome (A-Z)</SelectItem>
                                     <SelectItem value="purchases-high">Maior total de compras</SelectItem>
                                     <SelectItem value="purchases-low">Menor total de compras</SelectItem>
-                                    <SelectItem value="birthday-next">AniversÃ¡rio mais prÃ³ximo</SelectItem>
-                                    <SelectItem value="birthday-date">Data de aniversÃ¡rio</SelectItem>
+                                    <SelectItem value="birthday-next">Aniversário mais próximo</SelectItem>
+                                    <SelectItem value="birthday-date">Data de aniversário</SelectItem>
                                 </SelectContent>
                             </Select>
                         </ListFilterGroup>
@@ -426,11 +426,11 @@ export default function Page() {
                                                     </div>
                                                 )}
 
-                                                <div className="text-xs">
+                                                <span className="w-fit rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                                                     {customer.whatsapp_opt_in
                                                         ? 'WhatsApp autorizado'
-                                                        : 'WhatsApp nÃ£o autorizado'}
-                                                </div>
+                                                        : 'WhatsApp não autorizado'}
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
@@ -444,7 +444,7 @@ export default function Page() {
                                         </div>
 
                                         <div className="rounded-lg bg-muted/30 px-3 py-2 text-left lg:text-right">
-                                            <p className="text-xs text-muted-foreground">AniversÃ¡rio</p>
+                                            <p className="text-xs text-muted-foreground">Aniversário</p>
                                             <p className="text-sm font-semibold">
                                                 {formatBirthDate(customer.nascimento)}
                                             </p>
@@ -554,7 +554,7 @@ function getBirthDateParts(value: string | null) {
 
 function formatBirthDate(value: string | null) {
     const parts = getBirthDateParts(value)
-    if (!parts) return 'NÃ£o informado'
+    if (!parts) return 'Não informado'
 
     return `${String(parts.day).padStart(2, '0')}/${String(parts.month).padStart(2, '0')}`
 }
