@@ -29,12 +29,15 @@ type Collaborator = {
   criado_em: string
 }
 
+type Feedback = { type: 'success' | 'error'; message: string }
+
 export default function Page() {
   const [items, setItems] = useState<Collaborator[]>([])
   const [open, setOpen] = useState(false)
   const [selected, setSelected] = useState<Collaborator | null>(null)
   const [form, setForm] = useState({ nome: '', email: '', senha: '', ativo: true })
   const [saving, setSaving] = useState(false)
+  const [feedback, setFeedback] = useState<Feedback | null>(null)
 
   async function loadItems() {
     const { data } = await supabase
@@ -69,6 +72,7 @@ export default function Page() {
 
   async function save() {
     setSaving(true)
+    setFeedback(null)
 
     try {
       const method = selected ? 'PATCH' : 'POST'
@@ -97,10 +101,11 @@ export default function Page() {
       const json = await res.json()
 
       if (!res.ok) {
-        alert(json.error || 'Erro ao salvar colaborador.')
+        setFeedback({ type: 'error', message: json.error || 'Erro ao salvar colaborador.' })
         return
       }
 
+      setFeedback({ type: 'success', message: selected ? 'Colaborador atualizado com sucesso.' : 'Colaborador criado com sucesso.' })
       setOpen(false)
       await loadItems()
     } finally {
@@ -110,6 +115,7 @@ export default function Page() {
 
   async function toggleActive(item: Collaborator) {
     setSaving(true)
+    setFeedback(null)
 
     try {
       const res = await fetch('/api/admin/colaboradores', {
@@ -128,10 +134,11 @@ export default function Page() {
       const json = await res.json()
 
       if (!res.ok) {
-        alert(json.error || 'Erro ao alterar status.')
+        setFeedback({ type: 'error', message: json.error || 'Erro ao alterar status.' })
         return
       }
 
+      setFeedback({ type: 'success', message: item.ativo ? 'Colaborador desativado com sucesso.' : 'Colaborador ativado com sucesso.' })
       await loadItems()
     } finally {
       setSaving(false)
@@ -156,6 +163,16 @@ export default function Page() {
           <CardTitle>Lista de colaboradores</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
+          {feedback && (
+            <p
+              className={`rounded-lg border p-3 text-sm ${feedback.type === 'error'
+                ? 'border-destructive/30 bg-destructive/5 text-destructive'
+                : 'border-primary/20 bg-primary/5 text-foreground'
+              }`}
+            >
+              {feedback.message}
+            </p>
+          )}
           {items.length === 0 && <p className="text-sm text-muted-foreground">Nenhum colaborador cadastrado.</p>}
 
           {items.map((item) => (

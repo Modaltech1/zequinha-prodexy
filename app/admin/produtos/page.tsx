@@ -15,12 +15,14 @@ import {
 } from '@prodexy/ui'
 import { Boxes, DollarSign, Filter, Minus, Package, Pencil, Plus, Trash2 } from 'lucide-react'
 import { AdminPage, AdminPageHeader } from '@/components/admin-page'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { ListPagination } from '@/components/list-pagination'
 import { ListFilterGroup, ListSearch, ListState, ListToolbar } from '@/components/list-toolbar'
 import { ProductDialog, type ProdutoRow } from '@/components/product-dialog'
 import { supabase } from '@/lib/supabaseClient'
 
 type SortOption = 'nome' | 'estoque-maior' | 'estoque-menor' | 'valor-maior' | 'valor-menor'
+type Feedback = { type: 'success' | 'error'; message: string }
 
 type ProdutoDbRow = Omit<ProdutoRow, 'quantidade_estoque' | 'valor_unitario'> & {
   quantidade_estoque: number | string | null
@@ -50,6 +52,9 @@ export default function Page() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedProduto, setSelectedProduto] = useState<ProdutoRow | null>(null)
   const [stockUpdatingId, setStockUpdatingId] = useState<string | null>(null)
+  const [feedback, setFeedback] = useState<Feedback | null>(null)
+  const [produtoToDelete, setProdutoToDelete] = useState<ProdutoRow | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
 
@@ -120,6 +125,7 @@ export default function Page() {
     if (nextStock === produto.quantidade_estoque) return
 
     setStockUpdatingId(produto.id)
+    setFeedback(null)
 
     const { error } = await supabase
       .from('produtos')
@@ -131,7 +137,7 @@ export default function Page() {
 
     if (error) {
       console.error('Erro ao atualizar estoque:', error)
-      alert('Erro ao atualizar estoque do produto.')
+      setFeedback({ type: 'error', message: 'Erro ao atualizar estoque do produto.' })
       setStockUpdatingId(null)
       return
     }
@@ -141,20 +147,31 @@ export default function Page() {
         item.id === produto.id ? { ...item, quantidade_estoque: nextStock } : item
       )
     )
+    setFeedback({ type: 'success', message: `Estoque de "${produto.nome}" atualizado.` })
     setStockUpdatingId(null)
   }
 
-  async function handleDelete(produto: ProdutoRow) {
-    const confirmed = window.confirm(`Deseja excluir o produto "${produto.nome}"?`)
-    if (!confirmed) return
+  function handleDelete(produto: ProdutoRow) {
+    setProdutoToDelete(produto)
+  }
 
-    const { error } = await supabase.from('produtos').delete().eq('id', produto.id)
+  async function confirmDeleteProduto() {
+    if (!produtoToDelete) return
+
+    setDeleteLoading(true)
+    setFeedback(null)
+
+    const { error } = await supabase.from('produtos').delete().eq('id', produtoToDelete.id)
     if (error) {
       console.error('Erro ao excluir produto:', error)
-      alert('Erro ao excluir produto.')
+      setFeedback({ type: 'error', message: 'Erro ao excluir produto. Ele pode estar vinculado a uma OS.' })
+      setDeleteLoading(false)
       return
     }
 
+    setFeedback({ type: 'success', message: `Produto "${produtoToDelete.nome}" excluído com sucesso.` })
+    setProdutoToDelete(null)
+    setDeleteLoading(false)
     await loadProdutos()
   }
 
@@ -186,6 +203,17 @@ export default function Page() {
       <Card>
         <CardHeader>
           <ListToolbar>
+            {feedback && (
+              <p
+                className={`rounded-lg border p-3 text-sm ${feedback.type === 'error'
+                  ? 'border-destructive/30 bg-destructive/5 text-destructive'
+                  : 'border-primary/20 bg-primary/5 text-foreground'
+                }`}
+              >
+                {feedback.message}
+              </p>
+            )}
+
             <ListSearch
               value={searchTerm}
               onChange={(value) => {
@@ -312,6 +340,18 @@ export default function Page() {
       </Card>
 
       <ProductDialog open={dialogOpen} onOpenChange={setDialogOpen} produto={selectedProduto} onSaved={loadProdutos} />
+
+      <ConfirmDialog
+        open={Boolean(produtoToDelete)}
+        onOpenChange={(open) => {
+          if (!open && !deleteLoading) setProdutoToDelete(null)
+        }}
+        title="Excluir produto"
+        description={produtoToDelete ? `Deseja excluir o produto "${produtoToDelete.nome}"? Essa ação não poderá ser desfeita.` : ''}
+        confirmLabel="Excluir produto"
+        loading={deleteLoading}
+        onConfirm={confirmDeleteProduto}
+      />
     </AdminPage>
   )
 }

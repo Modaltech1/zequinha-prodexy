@@ -23,6 +23,7 @@ import {
 import { Wrench, Car, Plus, Pencil, Trash2, Camera, FileText, Printer, Filter, MoreHorizontal, Eye, Package, CalendarDays } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
 import { AdminPage, AdminPageHeader } from '@/components/admin-page'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { ListPagination } from '@/components/list-pagination'
 import { ListFilterGroup, ListSearch, ListState, ListToolbar } from '@/components/list-toolbar'
 import { OrderDetailsDialog, type OrdemServicoDetails } from '@/components/order-details-dialog'
@@ -134,6 +135,7 @@ type OrdersPageProps = {
 
 type StatusFilter = 'ativas' | 'todos' | 'agendada' | 'aberta' | 'em_andamento' | 'finalizada' | 'cancelada'
 type PeriodFilter = 'todos' | 'hoje' | 'semana' | 'mes'
+type Feedback = { type: 'success' | 'error'; message: string }
 
 const ACTIVE_ORDER_STATUSES = ['agendada', 'aberta', 'em_andamento']
 const ORDER_SELECT =
@@ -190,6 +192,9 @@ export function OrdersPage({
 
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState<OrdemServicoDetails | null>(null)
+  const [feedback, setFeedback] = useState<Feedback | null>(null)
+  const [orderToDelete, setOrderToDelete] = useState<OrdemRow | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   const basePath = collaboratorMode ? '/colaborador/ordens' : '/admin/ordens'
 
@@ -468,10 +473,22 @@ export function OrdersPage({
     }
   }
 
-  async function handleDelete(order: OrdemRow) {
-    const confirmed = window.confirm(`Deseja excluir a OS "${formatOsNumber(order.numero, order.id)}"?`)
-    if (!confirmed) return
+  function handleDelete(order: OrdemRow) {
+    setOrderToDelete(order)
+  }
 
+  function handlePrint(details: OrdemServicoDetails) {
+    printOrder(details)
+    setFeedback({ type: 'success', message: `Impressão da OS #${details.numero} aberta em uma nova janela.` })
+  }
+
+  async function confirmDeleteOrder() {
+    if (!orderToDelete) return
+
+    setDeleteLoading(true)
+    setFeedback(null)
+
+    const order = orderToDelete
     const fotos = photosByOrder[order.id] || []
     const produtosDaOs = productRowsByOrder[order.id] || []
 
@@ -488,6 +505,8 @@ export function OrdersPage({
 
       if (productStocksError) {
         console.error('Erro ao buscar estoque para restaurar produtos da OS:', productStocksError)
+        setFeedback({ type: 'error', message: 'Erro ao conferir o estoque antes de excluir a OS.' })
+        setDeleteLoading(false)
         return
       }
 
@@ -502,6 +521,8 @@ export function OrdersPage({
 
         if (restoreError) {
           console.error('Erro ao restaurar estoque ao excluir OS:', restoreError)
+          setFeedback({ type: 'error', message: 'Erro ao restaurar estoque ao excluir a OS.' })
+          setDeleteLoading(false)
           return
         }
       }
@@ -510,6 +531,8 @@ export function OrdersPage({
     const { error } = await supabase.from('ordens_de_servico').delete().eq('id', order.id)
     if (error) {
       console.error('Erro ao excluir OS:', error)
+      setFeedback({ type: 'error', message: 'Erro ao excluir OS. Tente novamente.' })
+      setDeleteLoading(false)
       return
     }
 
@@ -532,6 +555,9 @@ export function OrdersPage({
       }
     }
 
+    setFeedback({ type: 'success', message: `OS #${formatOsNumber(order.numero, order.id)} excluída com sucesso.` })
+    setOrderToDelete(null)
+    setDeleteLoading(false)
     await loadOrders()
   }
 
@@ -563,6 +589,17 @@ export function OrdersPage({
       <Card>
         <CardHeader>
           <ListToolbar>
+            {feedback && (
+              <p
+                className={`rounded-lg border p-3 text-sm ${feedback.type === 'error'
+                  ? 'border-destructive/30 bg-destructive/5 text-destructive'
+                  : 'border-primary/20 bg-primary/5 text-foreground'
+                }`}
+              >
+                {feedback.message}
+              </p>
+            )}
+
             <ListSearch
               value={searchTerm}
               onChange={(value) => {
@@ -682,7 +719,7 @@ export function OrdersPage({
                           Ver detalhes
                         </DropdownMenuItem>
 
-                        <DropdownMenuItem onClick={() => printOrder(details)}>
+                        <DropdownMenuItem onClick={() => handlePrint(details)}>
                           <Printer className="h-4 w-4" />
                           Imprimir
                         </DropdownMenuItem>
@@ -722,6 +759,18 @@ export function OrdersPage({
       </Card>
 
       <OrderDetailsDialog open={detailsOpen} onOpenChange={setDetailsOpen} order={selectedOrder} />
+
+      <ConfirmDialog
+        open={Boolean(orderToDelete)}
+        onOpenChange={(open) => {
+          if (!open && !deleteLoading) setOrderToDelete(null)
+        }}
+        title="Excluir ordem de serviço"
+        description={orderToDelete ? `Deseja excluir a OS #${formatOsNumber(orderToDelete.numero, orderToDelete.id)}? Os produtos vendidos serão devolvidos ao estoque e essa ação não poderá ser desfeita.` : ''}
+        confirmLabel="Excluir OS"
+        loading={deleteLoading}
+        onConfirm={confirmDeleteOrder}
+      />
     </AdminPage>
   )
 }

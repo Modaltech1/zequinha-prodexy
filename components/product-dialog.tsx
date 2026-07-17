@@ -98,16 +98,16 @@ export function ProductDialog({ open, onOpenChange, produto, onSaved }: ProductD
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[560px]">
-        <DialogHeader>
+      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-[560px]">
+        <DialogHeader className="space-y-1">
           <DialogTitle>{produto ? 'Editar produto' : 'Novo produto'}</DialogTitle>
           <DialogDescription>
             Cadastre os dados básicos de estoque. Estes produtos ainda não ficam vinculados a ordens de serviço.
           </DialogDescription>
         </DialogHeader>
 
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          {error && <p className="text-sm text-destructive">{error}</p>}
+        <form className="space-y-4 [&_input]:border-[#d8c9b6] [&_input]:bg-white/80 [&_input]:shadow-sm [&_[role=combobox]]:border-[#d8c9b6] [&_[role=combobox]]:bg-white/80 [&_[role=combobox]]:shadow-sm" onSubmit={handleSubmit}>
+          {error && <p className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{error}</p>}
 
           <div className="space-y-2">
             <Label htmlFor="produto-nome">Nome do produto</Label>
@@ -162,7 +162,7 @@ export function ProductDialog({ open, onOpenChange, produto, onSaved }: ProductD
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="gap-2 border-t pt-4 sm:justify-end [&>button]:w-full [&>button]:sm:w-auto">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>

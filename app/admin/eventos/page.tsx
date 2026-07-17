@@ -24,6 +24,7 @@ import {
 } from '@prodexy/ui'
 import { CalendarDays, Gift, Pencil, Plus, Shuffle, Trash2, Trophy, Users } from 'lucide-react'
 import { AdminPage, AdminPageHeader } from '@/components/admin-page'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { supabase } from '@/lib/supabaseClient'
 
 type ClienteRow = {
@@ -103,6 +104,9 @@ export default function Page() {
   const [drawing, setDrawing] = useState(false)
   const [animatedName, setAnimatedName] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+  const [eventToDelete, setEventToDelete] = useState<EventoRow | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   async function loadData() {
     setLoading(true)
@@ -242,16 +246,29 @@ export default function Page() {
     }
   }
 
-  async function deleteEvent(event: EventoRow) {
-    const confirmed = window.confirm(`Deseja excluir o evento "${event.titulo}"?`)
-    if (!confirmed) return
-    const { error } = await supabase.from('eventos').delete().eq('id', event.id)
+  function deleteEvent(event: EventoRow) {
+    setEventToDelete(event)
+  }
+
+  async function confirmDeleteEvent() {
+    if (!eventToDelete) return
+
+    setDeleteLoading(true)
+    setError(null)
+    setSuccess(null)
+
+    const { error } = await supabase.from('eventos').delete().eq('id', eventToDelete.id)
     if (error) {
       console.error(error)
       setError('Erro ao excluir evento.')
+      setDeleteLoading(false)
       return
     }
-    if (selectedEventId === event.id) setSelectedEventId('')
+
+    if (selectedEventId === eventToDelete.id) setSelectedEventId('')
+    setSuccess(`Evento "${eventToDelete.titulo}" excluído com sucesso.`)
+    setEventToDelete(null)
+    setDeleteLoading(false)
     await loadData()
   }
 
@@ -331,6 +348,7 @@ export default function Page() {
       </div>
 
       {error && <p className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{error}</p>}
+      {success && <p className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm text-foreground">{success}</p>}
 
       <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
         <Card>
@@ -502,6 +520,18 @@ export default function Page() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={Boolean(eventToDelete)}
+        onOpenChange={(open) => {
+          if (!open && !deleteLoading) setEventToDelete(null)
+        }}
+        title="Excluir evento"
+        description={eventToDelete ? `Deseja excluir o evento "${eventToDelete.titulo}"? Essa ação não poderá ser desfeita.` : ''}
+        confirmLabel="Excluir evento"
+        loading={deleteLoading}
+        onConfirm={confirmDeleteEvent}
+      />
     </AdminPage>
   )
 }

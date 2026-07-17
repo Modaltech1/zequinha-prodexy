@@ -16,9 +16,12 @@ import {
 import { Plus, Package, Trash2, Pencil, Wrench, Filter } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
 import { AdminPage, AdminPageHeader } from '@/components/admin-page'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { ListPagination } from '@/components/list-pagination'
 import { ListFilterGroup, ListSearch, ListState, ListToolbar } from '@/components/list-toolbar'
 import { ServicoDialog, type ServicoRow } from '@/components/servico-dialog'
+
+type Feedback = { type: 'success' | 'error'; message: string }
 
 export default function Page() {
   const [servicos, setServicos] = useState<ServicoRow[]>([])
@@ -31,6 +34,9 @@ export default function Page() {
   const itemsPerPage = 10
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedServico, setSelectedServico] = useState<ServicoRow | null>(null)
+  const [feedback, setFeedback] = useState<Feedback | null>(null)
+  const [servicoToDelete, setServicoToDelete] = useState<ServicoRow | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   async function loadServicos() {
     setLoading(true)
@@ -89,17 +95,27 @@ export default function Page() {
   const servicosPeriodicos = servicos.filter((servico) => servico.is_periodico).length
   const totalVinculos = Object.values(usageByService).reduce((sum: number, count) => sum + Number(count), 0)
 
-  async function handleDelete(servico: ServicoRow) {
-    const confirmed = window.confirm(`Deseja excluir o serviço "${servico.nome}"?`)
-    if (!confirmed) return
+  function handleDelete(servico: ServicoRow) {
+    setServicoToDelete(servico)
+  }
 
-    const { error } = await supabase.from('servicos').delete().eq('id', servico.id)
+  async function confirmDeleteServico() {
+    if (!servicoToDelete) return
+
+    setDeleteLoading(true)
+    setFeedback(null)
+
+    const { error } = await supabase.from('servicos').delete().eq('id', servicoToDelete.id)
     if (error) {
       console.error('Erro ao excluir serviço:', error)
-      alert('Erro ao excluir serviço. Ele pode estar vinculado a uma OS.')
+      setFeedback({ type: 'error', message: 'Erro ao excluir serviço. Ele pode estar vinculado a uma OS.' })
+      setDeleteLoading(false)
       return
     }
 
+    setFeedback({ type: 'success', message: `Serviço "${servicoToDelete.nome}" excluído com sucesso.` })
+    setServicoToDelete(null)
+    setDeleteLoading(false)
     await loadServicos()
   }
 
@@ -131,6 +147,17 @@ export default function Page() {
       <Card>
         <CardHeader>
           <ListToolbar>
+            {feedback && (
+              <p
+                className={`rounded-lg border p-3 text-sm ${feedback.type === 'error'
+                  ? 'border-destructive/30 bg-destructive/5 text-destructive'
+                  : 'border-primary/20 bg-primary/5 text-foreground'
+                }`}
+              >
+                {feedback.message}
+              </p>
+            )}
+
             <ListSearch
               value={searchTerm}
               onChange={(value) => {
@@ -224,6 +251,18 @@ export default function Page() {
       </Card>
 
       <ServicoDialog open={dialogOpen} onOpenChange={setDialogOpen} servico={selectedServico} onSaved={loadServicos} />
+
+      <ConfirmDialog
+        open={Boolean(servicoToDelete)}
+        onOpenChange={(open) => {
+          if (!open && !deleteLoading) setServicoToDelete(null)
+        }}
+        title="Excluir serviço"
+        description={servicoToDelete ? `Deseja excluir o serviço "${servicoToDelete.nome}"? Essa ação não poderá ser desfeita.` : ''}
+        confirmLabel="Excluir serviço"
+        loading={deleteLoading}
+        onConfirm={confirmDeleteServico}
+      />
     </AdminPage>
   )
 }

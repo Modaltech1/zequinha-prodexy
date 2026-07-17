@@ -127,9 +127,9 @@ const defaultVehicleForm: VehicleDetailsForm = {
 
 function formatVehicleLabel(vehicle: VeiculoRow) {
   const label = [vehicle.marca, vehicle.modelo].filter(Boolean).join(' ')
-  if (!label && !vehicle.placa) return 'VeÃ­culo sem identificaÃ§Ã£o'
+  if (!label && !vehicle.placa) return 'Veículo sem identificação'
   if (!label) return vehicle.placa || 'Sem placa'
-  return `${label}${vehicle.placa ? ` â€¢ ${vehicle.placa}` : ''}`
+  return `${label}${vehicle.placa ? ` ⬢ ${vehicle.placa}` : ''}`
 }
 
 function getMonthRange(offset: number) {
@@ -177,13 +177,13 @@ function isWithinPeriod(dateValue: string | null, filter: PeriodFilter) {
 }
 
 function getMaintenanceStatus(item?: ManutencaoRow) {
-  if (!item?.proxima_data) return { label: 'Sem programaÃ§Ã£o', variant: 'secondary' as const }
+  if (!item?.proxima_data) return { label: 'Sem programação', variant: 'secondary' as const }
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const next = new Date(`${item.proxima_data}T00:00:00`)
   if (next < today) return { label: 'Atrasada', variant: 'destructive' as const }
   const currentMonth = getMonthRange(0)
-  if (next >= currentMonth.start && next <= currentMonth.end) return { label: 'Este mÃªs', variant: 'default' as const }
+  if (next >= currentMonth.start && next <= currentMonth.end) return { label: 'Este mês', variant: 'default' as const }
   return { label: 'Programada', variant: 'secondary' as const }
 }
 
@@ -224,7 +224,7 @@ export default function Page() {
 
     if (clientesRes.error || veiculosRes.error || ordensRes.error || servicosRes.error || manutencoesRes.error) {
       console.error(clientesRes.error || veiculosRes.error || ordensRes.error || servicosRes.error || manutencoesRes.error)
-      setError('Erro ao carregar dados de fidelizaÃ§Ã£o.')
+      setError('Erro ao carregar dados de fidelização.')
       setLoading(false)
       return
     }
@@ -375,9 +375,9 @@ export default function Page() {
 
     if (error) {
       console.error(error)
-      setError('Erro ao salvar veÃ­culo.')
+      setError('Erro ao salvar veículo.')
     } else {
-      setSuccess('VeÃ­culo atualizado.')
+      setSuccess('Veículo atualizado.')
       await loadData()
     }
     setSavingVehicle(false)
@@ -391,11 +391,11 @@ export default function Page() {
     setSuccess(null)
 
     try {
-      if (!maintenanceForm.servico_id) throw new Error('Selecione um serviÃ§o periÃ³dico.')
-      if (!maintenanceForm.proxima_data) throw new Error('Informe a data da prÃ³xima manutenÃ§Ã£o.')
+      if (!maintenanceForm.servico_id) throw new Error('Selecione um serviço periódico.')
+      if (!maintenanceForm.proxima_data) throw new Error('Informe a data da próxima manutenção.')
 
       const service = servicesById[maintenanceForm.servico_id]
-      if (!service?.is_periodico) throw new Error('O serviÃ§o selecionado nÃ£o estÃ¡ marcado como periÃ³dico.')
+      if (!service?.is_periodico) throw new Error('O serviço selecionado não está marcado como periódico.')
 
       const { error } = await supabase.from('manutencoes_veiculo').upsert({
         veiculo_id: selectedVehicle.id,
@@ -411,11 +411,11 @@ export default function Page() {
       if (error) throw error
 
       setMaintenanceForm({ ...defaultMaintenanceForm, servico_id: periodicServices[0]?.id || '' })
-      setSuccess('PrÃ³xima manutenÃ§Ã£o registrada.')
+      setSuccess('Próxima manutenção registrada.')
       await loadData()
     } catch (err: any) {
-      console.error('Erro ao registrar manutenÃ§Ã£o:', err)
-      setError(err?.message || 'Erro ao registrar manutenÃ§Ã£o.')
+      console.error('Erro ao registrar manutenção:', err)
+      setError(err?.message || 'Erro ao registrar manutenção.')
     } finally {
       setSavingMaintenance(false)
     }
@@ -425,7 +425,7 @@ export default function Page() {
     const { error } = await supabase.from('manutencoes_veiculo').update({ status: 'concluida', atualizado_em: new Date().toISOString() }).eq('id', item.id)
     if (error) {
       console.error(error)
-      setError('Erro ao concluir manutenÃ§Ã£o.')
+      setError('Erro ao concluir manutenção.')
       return
     }
     await loadData()
@@ -434,15 +434,15 @@ export default function Page() {
   return (
     <AdminPage>
       <AdminPageHeader
-        title="FidelizaÃ§Ã£o"
-        description="Acompanhe veÃ­culos, histÃ³rico de OS e prÃ³ximas manutenÃ§Ãµes."
+        title="Fidelização"
+        description="Acompanhe veículos, histórico de OS e próximas manutenções."
       />
 
       <div className="grid gap-4 md:grid-cols-4">
-        <SummaryCard title="VeÃ­culos monitorados" value={String(monitoredVehicles)} icon={Car} />
-        <SummaryCard title="ManutenÃ§Ãµes pendentes" value={String(pendingMaintenances.length)} icon={CalendarClock} />
+        <SummaryCard title="Veículos monitorados" value={String(monitoredVehicles)} icon={Car} />
+        <SummaryCard title="Manutenções pendentes" value={String(pendingMaintenances.length)} icon={CalendarClock} />
         <SummaryCard title="Vencidas" value={String(overdueCount)} icon={Wrench} />
-        <SummaryCard title="Este mÃªs" value={String(dueThisMonth.length)} icon={CalendarClock} />
+        <SummaryCard title="Este mês" value={String(dueThisMonth.length)} icon={CalendarClock} />
       </div>
 
       {error && <p className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{error}</p>}
@@ -457,32 +457,32 @@ export default function Page() {
                 setSearchTerm(value)
                 setCurrentPage(1)
               }}
-              placeholder="Buscar por cliente, telefone, placa, marca, modelo ou serviÃ§o..."
+              placeholder="Buscar por cliente, telefone, placa, marca, modelo ou serviço..."
             />
 
             <ListFilterGroup>
               <Select value={periodFilter} onValueChange={(value: string) => { setPeriodFilter(value as PeriodFilter); setCurrentPage(1) }}>
                 <SelectTrigger className="w-full sm:w-[230px]">
                   <Filter className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="Filtrar perÃ­odo..." />
+                  <SelectValue placeholder="Filtrar período..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="current-month">ManutenÃ§Ãµes deste mÃªs</SelectItem>
-                  <SelectItem value="next-month">ManutenÃ§Ãµes do prÃ³ximo mÃªs</SelectItem>
-                  <SelectItem value="next-3-months">PrÃ³ximos 3 meses</SelectItem>
-                  <SelectItem value="next-6-months">PrÃ³ximos 6 meses</SelectItem>
-                  <SelectItem value="overdue">ManutenÃ§Ãµes vencidas</SelectItem>
-                  <SelectItem value="all">Todas as manutenÃ§Ãµes</SelectItem>
+                  <SelectItem value="current-month">Manutenções deste mês</SelectItem>
+                  <SelectItem value="next-month">Manutenções do próximo mês</SelectItem>
+                  <SelectItem value="next-3-months">Próximos 3 meses</SelectItem>
+                  <SelectItem value="next-6-months">Próximos 6 meses</SelectItem>
+                  <SelectItem value="overdue">Manutenções vencidas</SelectItem>
+                  <SelectItem value="all">Todas as manutenções</SelectItem>
                 </SelectContent>
               </Select>
 
               <Select value={serviceFilter} onValueChange={(value: string) => { setServiceFilter(value); setCurrentPage(1) }}>
                 <SelectTrigger className="w-full sm:w-[260px]">
                   <Wrench className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="Filtrar serviÃ§o periÃ³dico..." />
+                  <SelectValue placeholder="Filtrar serviço periódico..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos os serviÃ§os periÃ³dicos</SelectItem>
+                  <SelectItem value="all">Todos os serviços periódicos</SelectItem>
                   {periodicServices.map((servico) => (
                     <SelectItem key={servico.id} value={servico.id}>
                       {servico.nome}
@@ -497,9 +497,9 @@ export default function Page() {
         <CardContent className="space-y-3">
           <ListState
             loading={loading}
-            loadingText="Carregando fidelizaÃ§Ã£o..."
+            loadingText="Carregando fidelização..."
             empty={!loading && paginatedItems.length === 0}
-            emptyText="Nenhuma manutenÃ§Ã£o periÃ³dica encontrada com os filtros atuais."
+            emptyText="Nenhuma manutenção periódica encontrada com os filtros atuais."
           />
 
           {paginatedItems.map(({ maintenance, vehicle, customer, service }) => {
@@ -513,11 +513,11 @@ export default function Page() {
                     {vehicle.tem_seguro && <Badge variant="secondary">Com seguro</Badge>}
                   </div>
                   <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-2 xl:grid-cols-5">
-                    <p><span className="font-medium text-foreground">Cliente:</span> {customer?.nome || 'Cliente nÃ£o identificado'}</p>
+                    <p><span className="font-medium text-foreground">Cliente:</span> {customer?.nome || 'Cliente não identificado'}</p>
                     <p><span className="font-medium text-foreground">Telefone:</span> {customer?.telefone || '-'}</p>
-                    <p><span className="font-medium text-foreground">ServiÃ§o:</span> {service?.nome || maintenance.tipo}</p>
-                    <p><span className="font-medium text-foreground">PrÃ³xima:</span> {maintenance.proxima_data ? new Date(`${maintenance.proxima_data}T00:00:00`).toLocaleDateString('pt-BR') : '-'}</p>
-                    <p><span className="font-medium text-foreground">HistÃ³rico:</span> {historyCountByVehicleId[vehicle.id] || 0} OS</p>
+                    <p><span className="font-medium text-foreground">Serviço:</span> {service?.nome || maintenance.tipo}</p>
+                    <p><span className="font-medium text-foreground">Próxima:</span> {maintenance.proxima_data ? new Date(`${maintenance.proxima_data}T00:00:00`).toLocaleDateString('pt-BR') : '-'}</p>
+                    <p><span className="font-medium text-foreground">Histórico:</span> {historyCountByVehicleId[vehicle.id] || 0} OS</p>
                   </div>
                 </div>
                 <Button variant="outline" className="gap-2" onClick={() => openDetails(vehicle)}>
@@ -532,7 +532,7 @@ export default function Page() {
             currentPage={currentPage}
             totalItems={maintenanceList.length}
             itemsPerPage={itemsPerPage}
-            itemLabel="manutenÃ§Ãµes"
+            itemLabel="manutenções"
             onPageChange={setCurrentPage}
           />
         </CardContent>
@@ -541,8 +541,8 @@ export default function Page() {
       <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
         <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{selectedVehicle ? formatVehicleLabel(selectedVehicle) : 'Detalhes do veÃ­culo'}</DialogTitle>
-            <DialogDescription>Consulte histÃ³rico, edite o veÃ­culo e registre prÃ³ximas manutenÃ§Ãµes.</DialogDescription>
+            <DialogTitle>{selectedVehicle ? formatVehicleLabel(selectedVehicle) : 'Detalhes do veículo'}</DialogTitle>
+            <DialogDescription>Consulte histórico, edite o veículo e registre próximas manutenções.</DialogDescription>
           </DialogHeader>
 
           {selectedVehicle && (
@@ -557,7 +557,7 @@ export default function Page() {
               </div>
 
               <div className="rounded-xl border p-4">
-                <p className="mb-3 text-sm font-semibold">Dados do veÃ­culo</p>
+                <p className="mb-3 text-sm font-semibold">Dados do veículo</p>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   <Field label="Placa" value={vehicleForm.placa} onChange={(value) => setVehicleForm((prev) => ({ ...prev, placa: value }))} />
                   <Field label="Marca" value={vehicleForm.marca} onChange={(value) => setVehicleForm((prev) => ({ ...prev, marca: value }))} />
@@ -570,58 +570,58 @@ export default function Page() {
                     <Select value={vehicleForm.tem_seguro} onValueChange={(value: string) => setVehicleForm((prev) => ({ ...prev, tem_seguro: value }))}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="nao">NÃ£o</SelectItem>
+                        <SelectItem value="nao">Não</SelectItem>
                         <SelectItem value="sim">Sim</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2 lg:col-span-3">
-                    <Label>ObservaÃ§Ãµes</Label>
+                    <Label>Observações</Label>
                     <Textarea value={vehicleForm.observacoes} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setVehicleForm((prev) => ({ ...prev, observacoes: e.target.value }))} />
                   </div>
                 </div>
                 <Button className="mt-4 gap-2" onClick={handleSaveVehicle} disabled={savingVehicle}>
                   <Save className="h-4 w-4" />
-                  {savingVehicle ? 'Salvando...' : 'Salvar veÃ­culo'}
+                  {savingVehicle ? 'Salvando...' : 'Salvar veículo'}
                 </Button>
               </div>
 
               <div className="grid gap-5 lg:grid-cols-2">
                 <Card>
                   <CardHeader>
-                    <p className="font-semibold">Registrar prÃ³xima manutenÃ§Ã£o</p>
+                    <p className="font-semibold">Registrar próxima manutenção</p>
                   </CardHeader>
                   <CardContent>
                     <form onSubmit={handleCreateMaintenance} className="space-y-3">
                       <div className="space-y-2">
-                        <Label>ServiÃ§o periÃ³dico</Label>
+                        <Label>Serviço periódico</Label>
                         <Select value={maintenanceForm.servico_id} onValueChange={(value: string) => setMaintenanceForm((prev) => ({ ...prev, servico_id: value }))}>
-                          <SelectTrigger><SelectValue placeholder="Selecione um serviÃ§o periÃ³dico" /></SelectTrigger>
+                          <SelectTrigger><SelectValue placeholder="Selecione um serviço periódico" /></SelectTrigger>
                           <SelectContent>
                             {periodicServices.map((servico) => (
                               <SelectItem key={servico.id} value={servico.id}>
-                                {servico.nome} â€¢ {servico.periodicidade_meses || 0} mÃªs(es)
+                                {servico.nome} ⬢ {servico.periodicidade_meses || 0} mês(es)
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label>PrÃ³xima data</Label>
+                        <Label>Próxima data</Label>
                         <Input type="date" value={maintenanceForm.proxima_data} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMaintenanceForm((prev) => ({ ...prev, proxima_data: e.target.value }))} />
                       </div>
                       <div className="space-y-2">
-                        <Label>DescriÃ§Ã£o</Label>
+                        <Label>Descrição</Label>
                         <Textarea value={maintenanceForm.descricao} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setMaintenanceForm((prev) => ({ ...prev, descricao: e.target.value }))} />
                       </div>
                       <Button type="submit" disabled={savingMaintenance || periodicServices.length === 0} className="gap-2">
                         <Plus className="h-4 w-4" />
-                        {savingMaintenance ? 'Salvando...' : 'Salvar prÃ³xima manutenÃ§Ã£o'}
+                        {savingMaintenance ? 'Salvando...' : 'Salvar próxima manutenção'}
                       </Button>
 
                       {periodicServices.length === 0 && (
                         <p className="text-xs text-muted-foreground">
-                          Cadastre pelo menos um serviÃ§o periÃ³dico na pÃ¡gina de ServiÃ§os.
+                          Cadastre pelo menos um serviço periódico na página de Serviços.
                         </p>
                       )}
                     </form>
@@ -630,22 +630,22 @@ export default function Page() {
 
                 <Card>
                   <CardHeader>
-                    <p className="font-semibold">HistÃ³rico e agenda</p>
+                    <p className="font-semibold">Histórico e agenda</p>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
-                      <p className="text-xs font-medium text-muted-foreground">Ãšltimas OS</p>
+                      <p className="text-xs font-medium text-muted-foreground">Últimas OS</p>
                       {selectedVehicleOrders.slice(0, 5).map((order) => (
                         <div key={order.id} className="rounded-lg border p-2 text-xs">
                           <p className="font-medium">OS #{order.numero || order.id.slice(0, 8)}</p>
-                          <p className="text-muted-foreground">{new Date(order.criado_em).toLocaleDateString('pt-BR')} â€¢ {order.status || 'sem status'}</p>
+                          <p className="text-muted-foreground">{new Date(order.criado_em).toLocaleDateString('pt-BR')} ⬢ {order.status || 'sem status'}</p>
                         </div>
                       ))}
-                      {selectedVehicleOrders.length === 0 && <p className="text-xs text-muted-foreground">Sem histÃ³rico de OS.</p>}
+                      {selectedVehicleOrders.length === 0 && <p className="text-xs text-muted-foreground">Sem histórico de OS.</p>}
                     </div>
 
                     <div className="space-y-2">
-                      <p className="text-xs font-medium text-muted-foreground">PrÃ³ximas programaÃ§Ãµes</p>
+                      <p className="text-xs font-medium text-muted-foreground">Próximas programações</p>
                       {selectedMaintenances.filter((item) => item.status === 'pendente').slice(0, 6).map((item) => (
                         <div key={item.id} className="flex items-start justify-between gap-3 rounded-lg border p-2 text-xs">
                           <div>
@@ -656,7 +656,7 @@ export default function Page() {
                           <Button size="sm" variant="outline" onClick={() => concludeMaintenance(item)}>Concluir</Button>
                         </div>
                       ))}
-                      {selectedMaintenances.filter((item) => item.status === 'pendente').length === 0 && <p className="text-xs text-muted-foreground">Sem agenda de manutenÃ§Ã£o.</p>}
+                      {selectedMaintenances.filter((item) => item.status === 'pendente').length === 0 && <p className="text-xs text-muted-foreground">Sem agenda de manutenção.</p>}
                     </div>
                   </CardContent>
                 </Card>

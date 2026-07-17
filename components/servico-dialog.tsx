@@ -88,16 +88,16 @@ export function ServicoDialog({ open, onOpenChange, servico, onSaved }: ServicoD
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[560px]">
-        <DialogHeader>
+      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-[560px]">
+        <DialogHeader className="space-y-1">
           <DialogTitle>{servico ? 'Editar serviço' : 'Novo serviço'}</DialogTitle>
           <DialogDescription>
             Cadastre o serviço e, quando ele exigir retorno periódico, informe o intervalo em meses.
           </DialogDescription>
         </DialogHeader>
 
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          {error && <p className="text-sm text-destructive">{error}</p>}
+        <form className="space-y-4 [&_input]:border-[#d8c9b6] [&_input]:bg-white/80 [&_input]:shadow-sm [&_[role=combobox]]:border-[#d8c9b6] [&_[role=combobox]]:bg-white/80 [&_[role=combobox]]:shadow-sm" onSubmit={handleSubmit}>
+          {error && <p className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{error}</p>}
 
           <div className="space-y-2">
             <Label htmlFor="nome">Nome do serviço</Label>
@@ -138,7 +138,7 @@ export function ServicoDialog({ open, onOpenChange, servico, onSaved }: ServicoD
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="gap-2 border-t pt-4 sm:justify-end [&>button]:w-full [&>button]:sm:w-auto">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>

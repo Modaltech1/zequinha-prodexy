@@ -26,6 +26,7 @@ import {
 } from 'lucide-react'
 import { AdminPage, AdminPageHeader } from '@/components/admin-page'
 import { CustomerDialog } from '@/components/customer-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { ListPagination } from '@/components/list-pagination'
 import { ListFilterGroup, ListSearch, ListState, ListToolbar } from '@/components/list-toolbar'
 import { supabase } from '@/lib/supabaseClient'
@@ -89,6 +90,9 @@ export default function Page() {
     const [customers, setCustomers] = useState<Customer[]>([])
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [success, setSuccess] = useState<string | null>(null)
+    const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null)
+    const [deleteLoading, setDeleteLoading] = useState(false)
 
     const loadCustomers = async () => {
         setLoading(true)
@@ -258,24 +262,33 @@ export default function Page() {
         setIsDialogOpen(true)
     }
 
-    const handleDelete = async (customer: Customer) => {
-        const confirmed = window.confirm(`Deseja excluir o cliente "${customer.nome}"?`)
-        if (!confirmed) return
+    const handleDelete = (customer: Customer) => {
+        setCustomerToDelete(customer)
+    }
+
+    const confirmDeleteCustomer = async () => {
+        if (!customerToDelete) return
+
+        setDeleteLoading(true)
+        setError(null)
+        setSuccess(null)
 
         try {
             const { error } = await supabase
                 .from('clientes')
                 .delete()
-                .eq('id', customer.id)
+                .eq('id', customerToDelete.id)
 
             if (error) throw error
 
+            setSuccess(`Cliente "${customerToDelete.nome}" excluído com sucesso.`)
+            setCustomerToDelete(null)
             await loadCustomers()
         } catch (err: any) {
             console.error('Erro ao excluir cliente', err)
-            alert(
-                'Erro ao excluir cliente. Ele pode ter ordens de serviço vinculadas. Se preferir, mantenha o cadastro e apenas pare de utilizá-lo.',
-            )
+            setError('Erro ao excluir cliente. Ele pode ter ordens de serviço vinculadas. Se preferir, mantenha o cadastro e apenas pare de utilizá-lo.')
+        } finally {
+            setDeleteLoading(false)
         }
     }
 
@@ -329,6 +342,10 @@ export default function Page() {
                     <ListToolbar>
                         {error && (
                             <p className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{error}</p>
+                        )}
+
+                        {success && (
+                            <p className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm text-foreground">{success}</p>
                         )}
 
                         <ListSearch
@@ -484,6 +501,18 @@ export default function Page() {
                 onOpenChange={setIsDialogOpen}
                 customer={editingCustomer}
                 onSaved={loadCustomers}
+            />
+
+            <ConfirmDialog
+                open={Boolean(customerToDelete)}
+                onOpenChange={(open) => {
+                    if (!open && !deleteLoading) setCustomerToDelete(null)
+                }}
+                title="Excluir cliente"
+                description={customerToDelete ? `Deseja excluir o cliente "${customerToDelete.nome}"? Essa ação não poderá ser desfeita.` : ''}
+                confirmLabel="Excluir cliente"
+                loading={deleteLoading}
+                onConfirm={confirmDeleteCustomer}
             />
         </AdminPage>
     )

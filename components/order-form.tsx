@@ -1290,7 +1290,7 @@ export function OrderForm({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{order ? 'Editar ordem de serviço' : 'Nova ordem de serviço'}</h1>
           <p className="text-muted-foreground">Preencha os dados da OS com serviços, diagnóstico e valores.</p>
@@ -1303,11 +1303,11 @@ export function OrderForm({
 
       <form
         onSubmit={handleSubmit}
-        className="space-y-6 [&_input]:border-[#d8c9b6] [&_input]:bg-white/75 [&_input]:shadow-sm [&_textarea]:border-[#d8c9b6] [&_textarea]:bg-white/75 [&_textarea]:shadow-sm [&_[role=combobox]]:border-[#d8c9b6] [&_[role=combobox]]:bg-white/75 [&_[role=combobox]]:shadow-sm [&_input:disabled]:bg-white/35 [&_input:disabled]:text-muted-foreground"
+        className="space-y-6 [&_input]:border-[#d8c9b6] [&_input]:bg-white/85 [&_input]:shadow-sm [&_textarea]:border-[#d8c9b6] [&_textarea]:bg-white/85 [&_textarea]:shadow-sm [&_[role=combobox]]:border-[#d8c9b6] [&_[role=combobox]]:bg-white/85 [&_[role=combobox]]:shadow-sm [&_input:disabled]:bg-white/45 [&_input:disabled]:text-muted-foreground [&_label]:text-sm [&_label]:font-medium"
       >
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        {error && <p className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{error}</p>}
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 rounded-xl border p-4">
+        <div className="grid gap-4 rounded-xl border bg-card/60 p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           <div className="space-y-2">
             <Label htmlFor="numero">Número da OS</Label>
             <Input id="numero" value={numero} placeholder="2026-001" onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNumero(e.target.value)} />
@@ -1384,7 +1384,7 @@ export function OrderForm({
           </div>
         </div>
 
-        <div className="space-y-3 rounded-xl border p-4">
+        <div className="space-y-3 rounded-xl border bg-card/60 p-4 shadow-sm">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-semibold">Cliente</p>
@@ -1481,7 +1481,7 @@ export function OrderForm({
           )}
         </div>
 
-        <div className="space-y-3 rounded-xl border p-4">
+        <div className="space-y-3 rounded-xl border bg-card/60 p-4 shadow-sm">
           <p className="text-sm font-semibold">Veículo</p>
           <div className="flex flex-col gap-2 sm:flex-row">
             <Select
@@ -1552,11 +1552,11 @@ export function OrderForm({
           </div>
         </div>
 
-        <div className="space-y-3 rounded-xl border p-4">
+        <div className="space-y-3 rounded-xl border bg-card/60 p-4 shadow-sm">
           <p className="text-sm font-semibold">Serviços autorizados na OS</p>
           <p className="text-xs text-muted-foreground">Nesta OS você pode preencher valor, código da peça e observações de cada serviço.</p>
 
-          <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="flex-1">
               <Select value={novoServicoId} onValueChange={setNovoServicoId}>
                 <SelectTrigger>
@@ -1571,7 +1571,7 @@ export function OrderForm({
                 </SelectContent>
               </Select>
             </div>
-            <Button type="button" onClick={handleAddServico} className="gap-2">
+            <Button type="button" onClick={handleAddServico} className="w-full gap-2 sm:w-auto">
               <Plus className="h-4 w-4" />
               Adicionar serviço
             </Button>
@@ -1579,8 +1579,8 @@ export function OrderForm({
 
           <div className="space-y-3">
             {servicos.map((servico, index) => (
-              <div key={`${servico.servico_id}-${index}`} className="space-y-3 rounded-lg border p-3">
-                <div className="flex items-center justify-between gap-3">
+              <div key={`${servico.servico_id}-${index}`} className="space-y-3 rounded-lg border bg-background/70 p-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <p className="font-medium">
                     {servico.nome} x{parseQuantidade(servico.quantidade)}
                   </p>
@@ -1634,11 +1634,11 @@ export function OrderForm({
           </div>
         </div>
 
-        <div className="space-y-3 rounded-xl border p-4">
+        <div className="space-y-3 rounded-xl border bg-card/60 p-4 shadow-sm">
           <p className="text-sm font-semibold">Produtos vendidos na OS</p>
           <p className="text-xs text-muted-foreground">Selecione os produtos vendidos nesta OS. Ao salvar, o estoque será baixado automaticamente.</p>
 
-          <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="flex-1">
               <Select value={novoProdutoId} onValueChange={setNovoProdutoId}>
                 <SelectTrigger>
@@ -1653,7 +1653,7 @@ export function OrderForm({
                 </SelectContent>
               </Select>
             </div>
-            <Button type="button" onClick={handleAddProduto} className="gap-2">
+            <Button type="button" onClick={handleAddProduto} className="w-full gap-2 sm:w-auto">
               <Plus className="h-4 w-4" />
               Adicionar produto
             </Button>
@@ -1667,8 +1667,8 @@ export function OrderForm({
               const valorLinha = produtoLineTotal(produto.valor_unitario, produto.quantidade)
 
               return (
-                <div key={`${produto.produto_id}-${index}`} className="space-y-3 rounded-lg border p-3">
-                  <div className="flex items-center justify-between gap-3">
+                <div key={`${produto.produto_id}-${index}`} className="space-y-3 rounded-lg border bg-background/70 p-3">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p className="font-medium">
                         {produto.nome} x{quantidade}
@@ -1729,17 +1729,17 @@ export function OrderForm({
           </div>
         </div>
 
-        <div className="space-y-3 rounded-xl border p-4">
+        <div className="space-y-3 rounded-xl border bg-card/60 p-4 shadow-sm">
           <p className="text-sm font-semibold">Diagnóstico / itens não autorizados</p>
           <p className="text-xs text-muted-foreground">Use esta lista para registrar problemas encontrados que o cliente não autorizou virar serviço na OS.</p>
 
-          <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <Input
               value={novoDiagnostico}
               placeholder="Ex.: desgaste irregular nos pneus traseiros"
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNovoDiagnostico(e.target.value)}
             />
-            <Button type="button" variant="outline" onClick={handleAddDiagnostico} className="gap-2">
+            <Button type="button" variant="outline" onClick={handleAddDiagnostico} className="w-full gap-2 sm:w-auto">
               <Plus className="h-4 w-4" />
               Adicionar diagnóstico
             </Button>
@@ -1747,7 +1747,7 @@ export function OrderForm({
 
           <div className="space-y-2">
             {diagnosticos.map((item, index) => (
-              <div key={`${item.descricao}-${index}`} className="flex items-center justify-between gap-3 rounded-lg border p-3">
+              <div key={`${item.descricao}-${index}`} className="flex flex-col gap-3 rounded-lg border bg-background/70 p-3 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm">{item.descricao}</p>
                 <Button type="button" variant="outline" size="sm" className="gap-2" onClick={() => handleRemoveDiagnostico(index)}>
                   <Trash2 className="h-4 w-4" />
@@ -1759,20 +1759,20 @@ export function OrderForm({
           </div>
         </div>
 
-        <div className="space-y-3 rounded-xl border p-4">
+        <div className="space-y-3 rounded-xl border bg-card/60 p-4 shadow-sm">
           <p className="text-sm font-semibold">Mão de obra</p>
           <div className="space-y-2">
             <Input id="mao-de-obra" value={maoDeObra} placeholder="Ex.: 80,00" onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMaoDeObra(e.target.value)} />
           </div>
         </div>
 
-        <div className="space-y-3 rounded-xl border p-4">
+        <div className="space-y-3 rounded-xl border bg-card/60 p-4 shadow-sm">
           <p className="text-sm font-semibold">Fotos da OS</p>
           <p className="text-xs text-muted-foreground">
             Limite de 5 imagens. Em dispositivos móveis, o botão da câmera pode abrir a câmera traseira.
           </p>
 
-          <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <Input type="file" accept="image/*" multiple onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleAddFiles(e.target.files)} />
             <Input type="file" accept="image/*" capture="environment" onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleAddFiles(e.target.files)} />
           </div>
@@ -1805,7 +1805,7 @@ export function OrderForm({
           <Textarea id="observacoes" value={observacoes} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setObservacoes(e.target.value)} placeholder="Detalhes adicionais da OS..." />
         </div>
 
-        <div className="rounded-xl border p-4">
+        <div className="rounded-xl border bg-card/60 p-4 shadow-sm">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-sm font-semibold">Desconto</p>
@@ -1831,7 +1831,7 @@ export function OrderForm({
           </div>
         </div>
 
-        <div className="rounded-xl border bg-muted/30 p-4 text-sm space-y-2">
+        <div className="space-y-2 rounded-xl border bg-muted/30 p-4 text-sm shadow-sm">
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">Subtotal dos serviços</span>
             <span className="font-semibold">R$ {subtotalServicos.toFixed(2)}</span>
@@ -1858,7 +1858,7 @@ export function OrderForm({
           </div>
         </div>
 
-        <div className="flex justify-end gap-2">
+        <div className="sticky bottom-0 z-10 -mx-4 flex flex-col-reverse gap-2 border-t bg-background/95 px-4 py-4 backdrop-blur sm:static sm:mx-0 sm:flex-row sm:justify-end sm:border-t-0 sm:bg-transparent sm:px-0 sm:py-0 [&>button]:w-full [&>button]:sm:w-auto">
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancelar
           </Button>
