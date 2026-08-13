@@ -153,6 +153,9 @@ export function buildOrderPrintHtml(order: PrintableOrder, logoUrl?: string) {
     .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 34px; }
     .signature { border-top: 1px solid #111827; padding-top: 8px; text-align: center; }
     .terms { font-size: 11px; color: #374151; }
+    .legal-section { border-color: #9ca3af; background: #f9fafb; }
+    .legal-section .terms { margin: 0 0 7px; text-align: justify; }
+    .legal-section .terms:last-child { margin-bottom: 0; }
     .warranty-note { margin-top: 8px; font-weight: 600; }
     .photos-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 8px; }
     .photo-item { margin: 0; break-inside: avoid; page-break-inside: avoid; }
@@ -261,6 +264,19 @@ export function buildOrderPrintHtml(order: PrintableOrder, logoUrl?: string) {
     <p class="terms">
       Declaro estar ciente dos serviços executados/autorizados, dos diagnósticos registrados e das condições descritas nesta ordem de serviço.
     </p>
+
+    <section class="section legal-section">
+      <h3>Informa&ccedil;&otilde;es sobre pe&ccedil;as, nota fiscal e garantia</h3>
+      <p class="terms">
+        As pe&ccedil;as aplicadas nesta ordem de servi&ccedil;o s&atilde;o adquiridas por esta empresa diretamente junto a seus fornecedores, conforme crit&eacute;rio t&eacute;cnico e necessidade do servi&ccedil;o. A nota fiscal de compra emitida pelo fornecedor integra os controles internos da empresa e n&atilde;o &eacute; fornecida ao cliente.
+      </p>
+      <p class="terms">
+        O cliente receber&aacute;, como documento fiscal v&aacute;lido e &uacute;nico desta contrata&ccedil;&atilde;o, a Nota Fiscal de Servi&ccedil;os e Produtos vinculada a esta ordem de servi&ccedil;o.
+      </p>
+      <p class="terms">
+        Em cumprimento ao C&oacute;digo de Defesa do Consumidor, esta empresa assume integral responsabilidade pela escolha, qualidade, instala&ccedil;&atilde;o e garantia das pe&ccedil;as aplicadas, bem como pela execu&ccedil;&atilde;o dos servi&ccedil;os realizados, preservados todos os direitos do cliente, inclusive a garantia legal de 90 dias sobre m&atilde;o de obra e pe&ccedil;as instaladas.
+      </p>
+    </section>
 
     <div class="signatures">
       <div class="signature">Responsável pelo veículo</div>
