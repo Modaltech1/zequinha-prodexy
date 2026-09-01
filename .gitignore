@@ -4,6 +4,9 @@
 *.zip
 /script
 *.sql
+!/script/
+!/script/migration_produtos_catalogo_completo.sql
+!/script/migration_codigos_repasses_parceria.sql
 .next*
 # dependencies
 /node_modules

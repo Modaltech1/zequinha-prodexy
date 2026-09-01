@@ -1,0 +1,113 @@
+.tableViewport {
+  max-width: 100%;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+}
+
+.table {
+  width: 100%;
+  min-width: 2460px;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.8125rem;
+}
+
+.table th,
+.table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  text-align: left;
+  vertical-align: top;
+}
+
+.table th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.table tbody tr:hover td {
+  background: color-mix(in srgb, var(--muted) 55%, var(--card));
+}
+
+.codeColumn {
+  position: sticky !important;
+  left: 0;
+  z-index: 2;
+  min-width: 130px;
+  max-width: 160px;
+  background: var(--card);
+}
+
+.table th.codeColumn {
+  z-index: 5;
+  background: var(--muted);
+}
+
+.actionsColumn {
+  position: sticky !important;
+  right: 0;
+  z-index: 2;
+  width: 68px;
+  min-width: 68px;
+  background: var(--card);
+  border-right: 0 !important;
+  text-align: center !important;
+}
+
+.table th.actionsColumn {
+  z-index: 5;
+  background: var(--muted);
+}
+
+.nameColumn {
+  min-width: 220px;
+  max-width: 280px;
+}
+
+.shortTextColumn {
+  min-width: 140px;
+  max-width: 190px;
+}
+
+.longTextColumn {
+  min-width: 230px;
+  max-width: 300px;
+}
+
+.numericColumn {
+  min-width: 112px;
+  text-align: right !important;
+  white-space: nowrap;
+}
+
+.cellText {
+  display: -webkit-box;
+  overflow: hidden;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.scrollHint {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .scrollHint {
+    display: block;
+  }
+}

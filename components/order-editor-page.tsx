@@ -48,6 +48,7 @@ type OrdemProdutoItemRow = {
   produto_id: string
   quantidade?: number | null
   valor_unitario?: number | null
+  valor_custo?: number | null
   codigo_produto?: string | null
   observacao?: string | null
 }
@@ -272,7 +273,7 @@ export function OrderEditorPage({
       const row = orderRes.data as OrdemRow
       const [serviceRowsRes, productRowsRes, servicosRes, produtosRes, diagnosticosRes, fotosRes] = await Promise.all([
         supabase.from('ordem_servicos').select('id,os_id,servico_id,valor,quantidade,codigo_peca,observacao').eq('os_id', effectiveOrderId),
-        supabase.from('ordem_produtos').select('id,os_id,produto_id,quantidade,valor_unitario,codigo_produto,observacao').eq('os_id', effectiveOrderId),
+        supabase.from('ordem_produtos').select('id,os_id,produto_id,quantidade,valor_unitario,valor_custo,codigo_produto,observacao').eq('os_id', effectiveOrderId),
         supabase.from('servicos').select('id,nome,is_periodico,periodicidade_meses'),
         supabase.from('produtos').select('id,nome,marca_modelo,codigo'),
         supabase.from('ordem_diagnosticos').select('id,os_id,descricao').eq('os_id', effectiveOrderId),
@@ -371,6 +372,7 @@ export function OrderEditorPage({
           nome: productsById[item.produto_id]?.nome || 'Produto não identificado',
           marca_modelo: productsById[item.produto_id]?.marca_modelo || null,
           codigo: item.codigo_produto || productsById[item.produto_id]?.codigo || null,
+          valor_custo: Number(item.valor_custo || 0),
           valor_unitario: Number(item.valor_unitario || 0),
           quantidade: item.quantidade == null ? 1 : Number(item.quantidade),
           observacao: item.observacao || null,

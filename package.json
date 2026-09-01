@@ -6,7 +6,9 @@
     "build": "next build",
     "dev": "next dev",
     "lint": "eslint .",
-    "start": "next start"
+    "start": "next start",
+    "test": "node --test --experimental-strip-types --experimental-test-isolation=none",
+    "typecheck": "tsc -p tsconfig.financial.json && tsc -p tsconfig.products.json"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1009.0",

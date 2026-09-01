@@ -1,371 +1,460 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Badge,
   Button,
   Card,
   CardContent,
   CardHeader,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@prodexy/ui'
-import { Boxes, DollarSign, Filter, Minus, Package, Pencil, Plus, Trash2 } from 'lucide-react'
+import {
+  Boxes,
+  CircleDollarSign,
+  Filter,
+  MoreHorizontal,
+  Package,
+  Plus,
+  TrendingUp,
+  WalletCards,
+  type LucideIcon,
+} from 'lucide-react'
 import { AdminPage, AdminPageHeader } from '@/components/admin-page'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { ListPagination } from '@/components/list-pagination'
 import { ListFilterGroup, ListSearch, ListState, ListToolbar } from '@/components/list-toolbar'
-import { ProductDialog, type ProdutoRow } from '@/components/product-dialog'
+import { ProductDialog } from '@/components/product-dialog'
+import { ProductDetailsDialog } from '@/features/products/components/product-details-dialog'
+import styles from '@/features/products/components/products-table.module.css'
+import {
+  PRODUCT_SELECT,
+  getProductMargin,
+  getProductMarginPercentage,
+  getProductServiceTotal,
+  isPartnerProductCode,
+  matchesProductSearch,
+  normalizeProduct,
+  type Product,
+  type ProductDatabaseRow,
+} from '@/features/products/domain/product'
+import { printProductLabel } from '@/features/products/print/product-label'
 import { supabase } from '@/lib/supabaseClient'
 
-type SortOption = 'nome' | 'estoque-maior' | 'estoque-menor' | 'valor-maior' | 'valor-menor'
+type SortOption =
+  | 'codigo'
+  | 'nome'
+  | 'setor'
+  | 'estoque-maior'
+  | 'estoque-menor'
+  | 'venda-maior'
+  | 'margem-maior'
+
+type StockFilter = 'todos' | 'disponivel' | 'baixo' | 'zerado'
 type Feedback = { type: 'success' | 'error'; message: string }
 
-type ProdutoDbRow = Omit<ProdutoRow, 'quantidade_estoque' | 'valor_unitario'> & {
-  quantidade_estoque: number | string | null
-  valor_unitario: number | string | null
-}
+const ALL_SECTORS = '__all'
+const ITEMS_PER_PAGE = 15
 
-function normalizeProduct(row: ProdutoDbRow): ProdutoRow {
-  return {
-    ...row,
-    quantidade_estoque: Number(row.quantidade_estoque || 0),
-    valor_unitario: Number(row.valor_unitario || 0),
-  }
-}
-
-function formatCurrency(value: number) {
+function formatCurrency(value: number): string {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',
   }).format(Number(value || 0))
 }
 
+function getPhotoKey(product: Product): string {
+  if (product.foto_chave) return product.foto_chave
+  if (!product.foto_url) return ''
+  try {
+    const url = new URL(product.foto_url)
+    return url.pathname.startsWith('/') ? url.pathname.slice(1) : url.pathname
+  } catch {
+    return ''
+  }
+}
+
+function StockBadge({ quantity }: { quantity: number }) {
+  if (quantity <= 0) {
+    return <Badge variant="destructive">Sem estoque</Badge>
+  }
+  if (quantity <= 2) {
+    return <Badge variant="secondary" className="bg-amber-100 text-amber-900">Baixo · {quantity}</Badge>
+  }
+  return <Badge variant="secondary">{quantity} unidades</Badge>
+}
+
+function TableText({ value }: { value: string | null }) {
+  const display = value?.trim() || '-'
+  return <span className={styles.cellText} title={display}>{display}</span>
+}
+
+function SummaryCard({ title, value, description, icon: Icon }: {
+  title: string
+  value: string
+  description: string
+  icon: LucideIcon
+}) {
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-start justify-between gap-3 pb-2">
+        <p className="text-sm font-medium text-muted-foreground">{title}</p>
+        <span className="rounded-lg bg-primary/10 p-2 text-primary"><Icon className="h-4 w-4" /></span>
+      </CardHeader>
+      <CardContent>
+        <div className="text-xl font-bold leading-tight">{value}</div>
+        <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+      </CardContent>
+    </Card>
+  )
+}
+
 export default function Page() {
-  const [produtos, setProdutos] = useState<ProdutoRow[]>([])
+  const [products, setProducts] = useState<Product[]>([])
   const [searchTerm, setSearchTerm] = useState('')
-  const [sortBy, setSortBy] = useState<SortOption>('nome')
+  const [sortBy, setSortBy] = useState<SortOption>('codigo')
+  const [sectorFilter, setSectorFilter] = useState(ALL_SECTORS)
+  const [stockFilter, setStockFilter] = useState<StockFilter>('todos')
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [selectedProduto, setSelectedProduto] = useState<ProdutoRow | null>(null)
+  const [detailsOpen, setDetailsOpen] = useState(false)
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [stockUpdatingId, setStockUpdatingId] = useState<string | null>(null)
   const [feedback, setFeedback] = useState<Feedback | null>(null)
-  const [produtoToDelete, setProdutoToDelete] = useState<ProdutoRow | null>(null)
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 10
 
-  async function loadProdutos() {
+  const loadProducts = useCallback(async () => {
     setLoading(true)
+    setLoadError('')
 
     const { data, error } = await supabase
       .from('produtos')
-      .select('id,nome,marca_modelo,codigo,quantidade_estoque,valor_unitario,atualizado_em')
+      .select(PRODUCT_SELECT)
       .order('nome', { ascending: true })
 
     if (error) {
       console.error('Erro ao carregar produtos:', error)
-      setProdutos([])
+      setProducts([])
+      setLoadError('Não foi possível carregar o catálogo completo. Confirme a execução da migration de produtos no Supabase.')
       setLoading(false)
       return
     }
 
-    setProdutos(((data as ProdutoDbRow[]) || []).map(normalizeProduct))
+    setProducts(((data as unknown as ProductDatabaseRow[]) || []).map(normalizeProduct))
     setLoading(false)
-  }
-
-  useEffect(() => {
-    loadProdutos()
   }, [])
 
-  const filteredProdutos = useMemo(() => {
-    const term = searchTerm.trim().toLowerCase()
-    const filtered = produtos.filter((produto) => {
-      if (!term) return true
+  useEffect(() => {
+    loadProducts()
+  }, [loadProducts])
 
-      return [
-        produto.nome,
-        produto.marca_modelo || '',
-        produto.codigo || '',
-      ]
-        .join(' ')
-        .toLowerCase()
-        .includes(term)
+  const sectors = useMemo(() => Array.from(new Set(
+    products.map((product) => product.setor?.trim()).filter((sector): sector is string => Boolean(sector))
+  )).sort((left, right) => left.localeCompare(right, 'pt-BR', { numeric: true })), [products])
+
+  const filteredProducts = useMemo(() => {
+    const filtered = products.filter((product) => {
+      if (!matchesProductSearch(product, searchTerm)) return false
+      if (sectorFilter !== ALL_SECTORS && product.setor !== sectorFilter) return false
+      if (stockFilter === 'zerado' && product.quantidade_estoque !== 0) return false
+      if (stockFilter === 'baixo' && (product.quantidade_estoque <= 0 || product.quantidade_estoque > 2)) return false
+      if (stockFilter === 'disponivel' && product.quantidade_estoque <= 0) return false
+      return true
     })
 
-    return [...filtered].sort((a, b) => {
-      if (sortBy === 'estoque-maior') return b.quantidade_estoque - a.quantidade_estoque
-      if (sortBy === 'estoque-menor') return a.quantidade_estoque - b.quantidade_estoque
-      if (sortBy === 'valor-maior') return b.valor_unitario - a.valor_unitario
-      if (sortBy === 'valor-menor') return a.valor_unitario - b.valor_unitario
-      return a.nome.localeCompare(b.nome)
+    return [...filtered].sort((left, right) => {
+      if (sortBy === 'estoque-maior') return right.quantidade_estoque - left.quantidade_estoque
+      if (sortBy === 'estoque-menor') return left.quantidade_estoque - right.quantidade_estoque
+      if (sortBy === 'venda-maior') return right.valor_unitario - left.valor_unitario
+      if (sortBy === 'margem-maior') return getProductMargin(right) - getProductMargin(left)
+      if (sortBy === 'setor') return (left.setor || '').localeCompare(right.setor || '', 'pt-BR', { numeric: true })
+      if (sortBy === 'nome') return left.nome.localeCompare(right.nome, 'pt-BR')
+      return (left.codigo || '').localeCompare(right.codigo || '', 'pt-BR', { numeric: true })
+        || left.nome.localeCompare(right.nome, 'pt-BR')
     })
-  }, [produtos, searchTerm, sortBy])
-
-  const totalProdutos = produtos.length
-  const totalEstoque = produtos.reduce((sum, produto) => sum + produto.quantidade_estoque, 0)
-  const valorEmEstoque = produtos.reduce(
-    (sum, produto) => sum + produto.quantidade_estoque * produto.valor_unitario,
-    0
-  )
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const paginatedProdutos = filteredProdutos.slice(startIndex, endIndex)
+  }, [products, searchTerm, sectorFilter, stockFilter, sortBy])
 
   useEffect(() => {
-    const nextTotalPages = Math.ceil(filteredProdutos.length / itemsPerPage) || 1
-    if (currentPage > nextTotalPages) setCurrentPage(nextTotalPages)
-  }, [currentPage, filteredProdutos.length])
+    const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE) || 1
+    if (currentPage > totalPages) setCurrentPage(totalPages)
+  }, [currentPage, filteredProducts.length])
 
-  async function updateStock(produto: ProdutoRow, delta: number) {
-    const nextStock = Math.max(0, produto.quantidade_estoque + delta)
-    if (nextStock === produto.quantidade_estoque) return
+  const paginatedProducts = filteredProducts.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  )
 
-    setStockUpdatingId(produto.id)
+  const totals = useMemo(() => products.reduce((summary, product) => ({
+    units: summary.units + product.quantidade_estoque,
+    stockCost: summary.stockCost + product.quantidade_estoque * product.valor_custo,
+    stockSale: summary.stockSale + product.quantidade_estoque * product.valor_unitario,
+    stockMargin: summary.stockMargin + product.quantidade_estoque * getProductMargin(product),
+  }), { units: 0, stockCost: 0, stockSale: 0, stockMargin: 0 }), [products])
+
+  async function updateStock(product: Product, delta: number) {
+    const nextStock = Math.max(0, product.quantidade_estoque + delta)
+    if (nextStock === product.quantidade_estoque) return
+
+    setStockUpdatingId(product.id)
     setFeedback(null)
-
     const { error } = await supabase
       .from('produtos')
-      .update({
-        quantidade_estoque: nextStock,
-        atualizado_em: new Date().toISOString(),
-      })
-      .eq('id', produto.id)
+      .update({ quantidade_estoque: nextStock, atualizado_em: new Date().toISOString() })
+      .eq('id', product.id)
 
     if (error) {
       console.error('Erro ao atualizar estoque:', error)
-      setFeedback({ type: 'error', message: 'Erro ao atualizar estoque do produto.' })
-      setStockUpdatingId(null)
-      return
+      setFeedback({ type: 'error', message: 'Não foi possível atualizar o estoque.' })
+    } else {
+      setProducts((current) => current.map((item) => item.id === product.id
+        ? { ...item, quantidade_estoque: nextStock }
+        : item))
+      setFeedback({ type: 'success', message: `Estoque de “${product.nome}” atualizado para ${nextStock}.` })
     }
-
-    setProdutos((current) =>
-      current.map((item) =>
-        item.id === produto.id ? { ...item, quantidade_estoque: nextStock } : item
-      )
-    )
-    setFeedback({ type: 'success', message: `Estoque de "${produto.nome}" atualizado.` })
     setStockUpdatingId(null)
   }
 
-  function handleDelete(produto: ProdutoRow) {
-    setProdutoToDelete(produto)
+  function openDetails(product: Product) {
+    setSelectedProduct(product)
+    setDetailsOpen(true)
   }
 
-  async function confirmDeleteProduto() {
-    if (!produtoToDelete) return
+  function openEdit(product: Product) {
+    setDetailsOpen(false)
+    setSelectedProduct(product)
+    setDialogOpen(true)
+  }
 
+  function handlePrint(product: Product) {
+    if (!printProductLabel(product)) {
+      setFeedback({ type: 'error', message: 'O navegador bloqueou a janela de impressão. Permita pop-ups e tente novamente.' })
+    }
+  }
+
+  async function confirmDeleteProduct() {
+    if (!productToDelete) return
     setDeleteLoading(true)
     setFeedback(null)
 
-    const { error } = await supabase.from('produtos').delete().eq('id', produtoToDelete.id)
+    const deletedProduct = productToDelete
+    const { error } = await supabase.from('produtos').delete().eq('id', deletedProduct.id)
     if (error) {
       console.error('Erro ao excluir produto:', error)
-      setFeedback({ type: 'error', message: 'Erro ao excluir produto. Ele pode estar vinculado a uma OS.' })
+      setFeedback({ type: 'error', message: 'Não foi possível excluir o produto. Ele pode estar vinculado a uma OS.' })
       setDeleteLoading(false)
       return
     }
 
-    setFeedback({ type: 'success', message: `Produto "${produtoToDelete.nome}" excluído com sucesso.` })
-    setProdutoToDelete(null)
+    const photoKey = getPhotoKey(deletedProduct)
+    if (photoKey) {
+      await fetch('/api/delete-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: photoKey }),
+      }).catch(() => undefined)
+    }
+
+    setProducts((current) => current.filter((item) => item.id !== deletedProduct.id))
+    setFeedback({ type: 'success', message: `Produto “${deletedProduct.nome}” excluído.` })
+    setProductToDelete(null)
     setDeleteLoading(false)
-    await loadProdutos()
+  }
+
+  function resetFilters() {
+    setSearchTerm('')
+    setSectorFilter(ALL_SECTORS)
+    setStockFilter('todos')
+    setSortBy('codigo')
+    setCurrentPage(1)
   }
 
   return (
     <AdminPage>
       <AdminPageHeader
         title="Produtos"
-        description="Controle o catálogo de produtos e ajuste o estoque da loja."
+        description="Catálogo técnico e financeiro das peças, com controle de estoque e impressão térmica individual."
         actions={
-          <Button
-            onClick={() => {
-              setSelectedProduto(null)
-              setDialogOpen(true)
-            }}
-            className="gap-2"
-          >
+          <Button onClick={() => { setSelectedProduct(null); setDialogOpen(true) }} className="gap-2">
             <Plus className="h-4 w-4" />
             Novo produto
           </Button>
         }
       />
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <SummaryCard title="Total de produtos" value={String(totalProdutos)} icon={Package} />
-        <SummaryCard title="Unidades em estoque" value={String(totalEstoque)} icon={Boxes} />
-        <SummaryCard title="Valor em estoque" value={formatCurrency(valorEmEstoque)} icon={DollarSign} />
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        <SummaryCard title="Produtos cadastrados" value={String(products.length)} description="Itens distintos no catálogo" icon={Package} />
+        <SummaryCard title="Unidades em estoque" value={String(totals.units)} description="Soma das quantidades atuais" icon={Boxes} />
+        <SummaryCard title="Custo do estoque" value={formatCurrency(totals.stockCost)} description="Quantidade multiplicada pelo custo" icon={WalletCards} />
+        <SummaryCard title="Venda potencial" value={formatCurrency(totals.stockSale)} description="Quantidade multiplicada pelo preço de venda" icon={CircleDollarSign} />
+        <SummaryCard title="Margem potencial" value={formatCurrency(totals.stockMargin)} description="Venda potencial menos custo" icon={TrendingUp} />
       </div>
 
       <Card>
         <CardHeader>
           <ListToolbar>
             {feedback && (
-              <p
-                className={`rounded-lg border p-3 text-sm ${feedback.type === 'error'
-                  ? 'border-destructive/30 bg-destructive/5 text-destructive'
-                  : 'border-primary/20 bg-primary/5 text-foreground'
-                }`}
-              >
+              <p role="status" className={`rounded-lg border p-3 text-sm ${feedback.type === 'error'
+                ? 'border-destructive/30 bg-destructive/5 text-destructive'
+                : 'border-primary/20 bg-primary/5 text-foreground'}`}>
                 {feedback.message}
               </p>
             )}
+            {loadError && <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{loadError}</p>}
 
             <ListSearch
               value={searchTerm}
-              onChange={(value) => {
-                setSearchTerm(value)
-                setCurrentPage(1)
-              }}
-              placeholder="Buscar produto por nome, marca/modelo ou código..."
+              onChange={(value) => { setSearchTerm(value); setCurrentPage(1) }}
+              placeholder="Buscar por código, setor, peça, referência, marca ou aplicação..."
             />
 
             <ListFilterGroup>
-              <Select
-                value={sortBy}
-                onValueChange={(value: string) => {
-                  setSortBy(value as SortOption)
-                  setCurrentPage(1)
-                }}
-              >
-                <SelectTrigger className="w-full sm:w-[240px]">
-                  <Filter className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="Ordenar por..." />
-                </SelectTrigger>
+              <Select value={sectorFilter} onValueChange={(value: string) => { setSectorFilter(value); setCurrentPage(1) }}>
+                <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="Setor" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="nome">Nome (A-Z)</SelectItem>
-                  <SelectItem value="estoque-maior">Maior estoque</SelectItem>
-                  <SelectItem value="estoque-menor">Menor estoque</SelectItem>
-                  <SelectItem value="valor-maior">Maior valor</SelectItem>
-                  <SelectItem value="valor-menor">Menor valor</SelectItem>
+                  <SelectItem value={ALL_SECTORS}>Todos os setores</SelectItem>
+                  {sectors.map((sector) => <SelectItem key={sector} value={sector}>Setor {sector}</SelectItem>)}
                 </SelectContent>
               </Select>
+
+              <Select value={stockFilter} onValueChange={(value: string) => { setStockFilter(value as StockFilter); setCurrentPage(1) }}>
+                <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="Estoque" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todo o estoque</SelectItem>
+                  <SelectItem value="disponivel">Com estoque</SelectItem>
+                  <SelectItem value="baixo">Estoque baixo (1–2)</SelectItem>
+                  <SelectItem value="zerado">Sem estoque</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={sortBy} onValueChange={(value: string) => { setSortBy(value as SortOption); setCurrentPage(1) }}>
+                <SelectTrigger className="w-full sm:w-[210px]"><Filter className="mr-2 h-4 w-4" /><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="codigo">Código</SelectItem>
+                  <SelectItem value="nome">Nome da peça</SelectItem>
+                  <SelectItem value="setor">Setor</SelectItem>
+                  <SelectItem value="estoque-maior">Maior estoque</SelectItem>
+                  <SelectItem value="estoque-menor">Menor estoque</SelectItem>
+                  <SelectItem value="venda-maior">Maior preço de venda</SelectItem>
+                  <SelectItem value="margem-maior">Maior margem</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Button type="button" variant="outline" onClick={resetFilters}>Limpar filtros</Button>
             </ListFilterGroup>
           </ListToolbar>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <ListState
-            loading={loading}
-            loadingText="Carregando produtos..."
-            empty={!loading && filteredProdutos.length === 0}
-            emptyText="Nenhum produto encontrado."
-          />
 
-          {paginatedProdutos.map((produto) => {
-            const rowUpdating = stockUpdatingId === produto.id
-            const itemTotal = produto.quantidade_estoque * produto.valor_unitario
+        <CardContent className="space-y-4">
+          <p className={`${styles.scrollHint} text-xs text-muted-foreground`}>Deslize a tabela horizontalmente para consultar todas as informações.</p>
+          <ListState loading={loading} loadingText="Carregando produtos..." empty={!loading && filteredProducts.length === 0} emptyText="Nenhum produto encontrado." />
 
-            return (
-              <div key={produto.id} className="group flex flex-col gap-4 rounded-xl border bg-card p-4 shadow-sm transition-colors hover:border-primary/40 hover:bg-muted/20 lg:flex-row lg:items-center lg:justify-between">
-                <div className="flex items-start gap-4">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                    <Package className="h-5 w-5 text-primary" />
-                  </div>
-                  <div className="min-w-0 space-y-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-base font-semibold leading-tight text-foreground">{produto.nome}</p>
-                      {produto.marca_modelo && <Badge variant="secondary">{produto.marca_modelo}</Badge>}
-                    </div>
-                    <div className="grid gap-1.5 text-sm text-muted-foreground sm:grid-cols-3">
-                      <span>Código: {produto.codigo || '-'}</span>
-                      <span>Unitário: {formatCurrency(produto.valor_unitario)}</span>
-                      <span>Total: {formatCurrency(itemTotal)}</span>
-                    </div>
-                  </div>
-                </div>
+          {!loading && filteredProducts.length > 0 && (
+            <div className={styles.tableViewport}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th className={styles.codeColumn}>Código</th>
+                    <th>Setor</th>
+                    <th className={styles.nameColumn}>Nome da peça</th>
+                    <th className={styles.shortTextColumn}>Referência</th>
+                    <th className={styles.shortTextColumn}>Marca</th>
+                    <th className={styles.longTextColumn}>Função</th>
+                    <th className={styles.longTextColumn}>Aplicação</th>
+                    <th className={styles.longTextColumn}>Especificações</th>
+                    <th className={styles.longTextColumn}>Observações</th>
+                    <th>Estoque</th>
+                    <th className={styles.numericColumn}>Custo</th>
+                    <th className={styles.numericColumn}>Preço de venda</th>
+                    <th className={styles.numericColumn}>Mão de obra</th>
+                    <th className={styles.numericColumn}>Valor total</th>
+                    <th className={styles.numericColumn}>Margem</th>
+                    <th className={styles.actionsColumn}>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedProducts.map((product) => {
+                    const margin = getProductMargin(product)
+                    const marginPercentage = getProductMarginPercentage(product)
+                    const updatingStock = stockUpdatingId === product.id
 
-                <div className="flex flex-col gap-3 lg:items-end">
-                  <div className="flex h-10 w-full items-center justify-center overflow-hidden rounded-md border bg-background sm:w-auto">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-10 w-10 rounded-none"
-                      aria-label={`Diminuir estoque de ${produto.nome}`}
-                      disabled={rowUpdating || produto.quantidade_estoque <= 0}
-                      onClick={() => updateStock(produto, -1)}
-                    >
-                      <Minus className="h-4 w-4" />
-                    </Button>
-                    <div className="flex h-10 min-w-14 items-center justify-center border-x px-4 text-sm font-semibold">
-                      {produto.quantidade_estoque}
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-10 w-10 rounded-none"
-                      aria-label={`Aumentar estoque de ${produto.nome}`}
-                      disabled={rowUpdating}
-                      onClick={() => updateStock(produto, 1)}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
+                    return (
+                      <tr key={product.id}>
+                        <td className={`${styles.codeColumn} font-semibold`}>
+                          <span>{product.codigo || '-'}</span>
+                          {isPartnerProductCode(product.codigo) && <Badge variant="secondary" className="mt-1 block w-fit text-[10px]">Parceria</Badge>}
+                        </td>
+                        <td>{product.setor || '-'}</td>
+                        <td className={styles.nameColumn}><TableText value={product.nome} /></td>
+                        <td className={styles.shortTextColumn}><TableText value={product.referencia} /></td>
+                        <td className={styles.shortTextColumn}><TableText value={product.marca || product.marca_modelo} /></td>
+                        <td className={styles.longTextColumn}><TableText value={product.funcao} /></td>
+                        <td className={styles.longTextColumn}><TableText value={product.aplicacao} /></td>
+                        <td className={styles.longTextColumn}><TableText value={product.especificacoes} /></td>
+                        <td className={styles.longTextColumn}><TableText value={product.observacoes} /></td>
+                        <td><StockBadge quantity={product.quantidade_estoque} /></td>
+                        <td className={styles.numericColumn}>{formatCurrency(product.valor_custo)}</td>
+                        <td className={`${styles.numericColumn} font-semibold`}>{formatCurrency(product.valor_unitario)}</td>
+                        <td className={styles.numericColumn}>{formatCurrency(product.mao_de_obra)}</td>
+                        <td className={`${styles.numericColumn} font-semibold`}>{formatCurrency(getProductServiceTotal(product))}</td>
+                        <td className={`${styles.numericColumn} ${margin < 0 ? 'text-destructive' : 'text-emerald-700'}`}>{formatCurrency(margin)}<br /><span className="text-xs">{marginPercentage.toFixed(1)}%</span></td>
+                        <td className={styles.actionsColumn}>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label={`Ações de ${product.nome}`} disabled={updatingStock}>
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-52">
+                              <DropdownMenuLabel>{product.codigo || product.nome}</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => openDetails(product)}>Ver informações</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handlePrint(product)}>Imprimir etiqueta</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => openEdit(product)}>Editar</DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => updateStock(product, 1)}>Adicionar 1 ao estoque</DropdownMenuItem>
+                              <DropdownMenuItem disabled={product.quantidade_estoque <= 0} onClick={() => updateStock(product, -1)}>Retirar 1 do estoque</DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem variant="destructive" onClick={() => setProductToDelete(product)}>Excluir</DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
 
-                  <div className="flex w-full gap-2 sm:w-auto [&>button]:flex-1 [&>button]:sm:flex-none">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-2"
-                      onClick={() => {
-                        setSelectedProduto(produto)
-                        setDialogOpen(true)
-                      }}
-                    >
-                      <Pencil className="h-4 w-4" />
-                      Editar
-                    </Button>
-                    <Button variant="outline" size="sm" className="gap-2 text-destructive" onClick={() => handleDelete(produto)}>
-                      <Trash2 className="h-4 w-4" />
-                      Excluir
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )
-          })}
-
-          <ListPagination
-            currentPage={currentPage}
-            totalItems={filteredProdutos.length}
-            itemsPerPage={itemsPerPage}
-            itemLabel="produtos"
-            onPageChange={setCurrentPage}
-          />
+          <ListPagination currentPage={currentPage} totalItems={filteredProducts.length} itemsPerPage={ITEMS_PER_PAGE} itemLabel="produtos" onPageChange={setCurrentPage} />
         </CardContent>
       </Card>
 
-      <ProductDialog open={dialogOpen} onOpenChange={setDialogOpen} produto={selectedProduto} onSaved={loadProdutos} />
+      <ProductDialog open={dialogOpen} onOpenChange={setDialogOpen} produto={selectedProduct} onSaved={loadProducts} />
+      <ProductDetailsDialog open={detailsOpen} onOpenChange={setDetailsOpen} product={selectedProduct} onEdit={openEdit} onPrint={handlePrint} />
 
       <ConfirmDialog
-        open={Boolean(produtoToDelete)}
-        onOpenChange={(open) => {
-          if (!open && !deleteLoading) setProdutoToDelete(null)
-        }}
+        open={Boolean(productToDelete)}
+        onOpenChange={(open) => { if (!open && !deleteLoading) setProductToDelete(null) }}
         title="Excluir produto"
-        description={produtoToDelete ? `Deseja excluir o produto "${produtoToDelete.nome}"? Essa ação não poderá ser desfeita.` : ''}
+        description={productToDelete ? `Deseja excluir “${productToDelete.nome}”? A exclusão será bloqueada se o produto estiver vinculado a uma ordem de serviço.` : ''}
         confirmLabel="Excluir produto"
         loading={deleteLoading}
-        onConfirm={confirmDeleteProduto}
+        onConfirm={confirmDeleteProduct}
       />
     </AdminPage>
-  )
-}
-
-function SummaryCard({ title, value, icon: Icon }: { title: string; value: string; icon: any }) {
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <p className="text-sm font-medium text-muted-foreground">{title}</p>
-        <Icon className="h-4 w-4 text-muted-foreground" />
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
-      </CardContent>
-    </Card>
   )
 }

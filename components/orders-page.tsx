@@ -78,6 +78,7 @@ type OrdemProdutoItemRow = {
   produto_id: string
   quantidade?: number | null
   valor_unitario?: number | null
+  valor_custo?: number | null
   codigo_produto?: string | null
   observacao?: string | null
 }
@@ -266,7 +267,7 @@ export function OrdersPage({
         ? supabase.from('veiculos').select('id,cliente_id,placa,marca,modelo,ano,cor,tem_seguro').in('id', vehicleIds)
         : Promise.resolve({ data: [], error: null }),
       supabase.from('ordem_servicos').select('id,os_id,servico_id,valor,quantidade,codigo_peca,observacao').in('os_id', orderIds),
-      supabase.from('ordem_produtos').select('id,os_id,produto_id,quantidade,valor_unitario,codigo_produto,observacao').in('os_id', orderIds),
+      supabase.from('ordem_produtos').select('id,os_id,produto_id,quantidade,valor_unitario,valor_custo,codigo_produto,observacao').in('os_id', orderIds),
       supabase.from('ordem_fotos').select('id,os_id,foto_url,criado_em').in('os_id', orderIds).order('criado_em', { ascending: true }),
       supabase.from('ordem_diagnosticos').select('id,os_id,descricao,criado_em').in('os_id', orderIds).order('criado_em', { ascending: true }),
     ])
@@ -437,6 +438,7 @@ export function OrdersPage({
       nome: products[item.produto_id]?.nome || 'Produto não identificado',
       marca_modelo: products[item.produto_id]?.marca_modelo || null,
       codigo: item.codigo_produto || products[item.produto_id]?.codigo || null,
+      valor_custo: Number(item.valor_custo || 0),
       valor_unitario: Number(item.valor_unitario || 0),
       quantidade: item.quantidade == null ? 1 : Number(item.quantidade),
       observacao: item.observacao || null,

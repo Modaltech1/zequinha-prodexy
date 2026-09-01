@@ -1,0 +1,24 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "incremental": false,
+    "noEmit": true,
+    "paths": {
+      "@/*": ["./*"],
+      "@prodexy/ui": ["./features/products/type-support/prodexy-ui.ts"]
+    }
+  },
+  "include": [
+    "app/admin/produtos/**/*.tsx",
+    "components/admin-page.tsx",
+    "components/confirm-dialog.tsx",
+    "components/list-pagination.tsx",
+    "components/list-toolbar.tsx",
+    "components/product-dialog.tsx",
+    "features/products/**/*.ts",
+    "features/products/**/*.tsx",
+    "branding/brand.ts",
+    "lib/supabaseClient.ts"
+  ],
+  "exclude": ["node_modules"]
+}

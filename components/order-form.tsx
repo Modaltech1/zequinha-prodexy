@@ -40,6 +40,7 @@ type ProdutoOption = {
   marca_modelo?: string | null
   codigo?: string | null
   quantidade_estoque: number
+  valor_custo: number
   valor_unitario: number
 }
 
@@ -90,6 +91,7 @@ export type OrdemServicoEdit = {
     nome: string
     marca_modelo?: string | null
     codigo?: string | null
+    valor_custo?: number | null
     valor_unitario?: number | null
     quantidade?: number | null
     observacao?: string | null
@@ -120,6 +122,7 @@ type ProdutoSelecionado = {
   nome: string
   marca_modelo?: string | null
   codigo: string
+  valor_custo: number
   valor_unitario: string
   quantidade: string
   observacao: string
@@ -193,9 +196,13 @@ function produtoLineTotal(unitValor: string | number | null | undefined, quantid
 }
 
 function parseMoney(value: string) {
-  const trimmed = value.trim()
-  if (!trimmed) return 0
-  const normalized = trimmed.replace(/\./g, '').replace(',', '.')
+  const cleaned = value.trim().replace(/[^\d,.-]/g, '')
+  if (!cleaned) return 0
+  const normalized = cleaned.includes(',')
+    ? cleaned.replace(/\./g, '').replace(',', '.')
+    : /^-?\d{1,3}(\.\d{3})+$/.test(cleaned)
+      ? cleaned.replace(/\./g, '')
+      : cleaned
   return Number(normalized) || 0
 }
 
@@ -392,7 +399,7 @@ export function OrderForm({
     const [clientesRes, servicosRes, produtosRes, colaboradoresRes] = await Promise.all([
       supabase.from('clientes').select('id, nome, cpf_cnpj, telefone, email, cidade, bairro, nascimento, whatsapp_opt_in').order('nome', { ascending: true }),
       supabase.from('servicos').select('id, nome, is_periodico, periodicidade_meses').order('nome', { ascending: true }),
-      supabase.from('produtos').select('id,nome,marca_modelo,codigo,quantidade_estoque,valor_unitario').order('nome', { ascending: true }),
+      supabase.from('produtos').select('id,nome,marca_modelo,codigo,quantidade_estoque,valor_custo,valor_unitario').order('nome', { ascending: true }),
       supabase.from('perfis').select('id,nome').eq('papel', 'colaborador').eq('ativo', true).order('nome', { ascending: true }),
     ])
 
@@ -425,6 +432,7 @@ export function OrderForm({
       ((produtosRes.data as ProdutoOption[]) || []).map((item) => ({
         ...item,
         quantidade_estoque: Number(item.quantidade_estoque || 0),
+        valor_custo: Number(item.valor_custo || 0),
         valor_unitario: Number(item.valor_unitario || 0),
       }))
     )
@@ -516,6 +524,7 @@ export function OrderForm({
           nome: p.nome,
           marca_modelo: p.marca_modelo || null,
           codigo: p.codigo || '',
+          valor_custo: Number(p.valor_custo || 0),
           valor_unitario: formatMoneyInput(p.valor_unitario),
           quantidade: String(p.quantidade ?? 1),
           observacao: p.observacao || '',
@@ -705,6 +714,7 @@ export function OrderForm({
         nome: selected.nome,
         marca_modelo: selected.marca_modelo,
         codigo: selected.codigo || '',
+        valor_custo: Number(selected.valor_custo || 0),
         valor_unitario: formatMoneyInput(selected.valor_unitario),
         quantidade: '1',
         observacao: '',
@@ -890,6 +900,7 @@ export function OrderForm({
             nome: selectedProdutoFromDraft.nome,
             marca_modelo: selectedProdutoFromDraft.marca_modelo,
             codigo: selectedProdutoFromDraft.codigo || '',
+            valor_custo: Number(selectedProdutoFromDraft.valor_custo || 0),
             valor_unitario: formatMoneyInput(selectedProdutoFromDraft.valor_unitario),
             quantidade: '1',
             observacao: '',
@@ -1117,6 +1128,7 @@ export function OrderForm({
             quantidade: parseQuantidade(p.quantidade),
             valor_unitario: parseMoney(p.valor_unitario),
             codigo_produto: p.codigo.trim() || null,
+            valor_custo: Number(p.valor_custo || 0),
             observacao: p.observacao.trim() || null,
           })))
 
@@ -1710,7 +1722,8 @@ export function OrderForm({
                       <Input
                         value={produto.codigo}
                         placeholder="Ex.: PNEU-175-65R14"
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateProduto(index, { codigo: e.target.value })}
+                        readOnly
+                        aria-readonly="true"
                       />
                     </div>
                     <div className="space-y-2 md:col-span-1">

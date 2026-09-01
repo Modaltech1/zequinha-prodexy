@@ -1,0 +1,262 @@
+.screenOnly {
+  display: block;
+}
+
+.printOnly {
+  display: none;
+}
+
+.tableScroller {
+  overflow-x: auto;
+}
+
+.dataTable {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.wideTable {
+  min-width: 1180px;
+}
+
+.dataTable th,
+.dataTable td {
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.dataTable th {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.dataTable tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.numeric {
+  text-align: right !important;
+  white-space: nowrap;
+}
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 10mm;
+  }
+
+  :global(body) {
+    background: #ffffff !important;
+    color: #20231f !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  :global(body *) {
+    visibility: hidden !important;
+  }
+
+  .screenOnly {
+    display: none !important;
+  }
+
+  .printOnly,
+  .printOnly * {
+    visibility: visible !important;
+  }
+
+  .printOnly {
+    position: absolute;
+    inset: 0;
+    display: block !important;
+    width: 100%;
+    color: #20231f;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 8pt;
+  }
+
+  .printHeader {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) 2fr;
+    align-items: center;
+    gap: 24px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #d8dcd2;
+  }
+
+  .printBrand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .printBrand img {
+    width: 54px;
+    height: 54px;
+    object-fit: contain;
+    border-radius: 8px;
+  }
+
+  .printBrand strong,
+  .printBrand span {
+    display: block;
+  }
+
+  .printBrand strong {
+    font-size: 11pt;
+  }
+
+  .printBrand span,
+  .printTitle p,
+  .printCaption {
+    margin-top: 3px;
+    color: #647087;
+  }
+
+  .printTitle {
+    text-align: right;
+  }
+
+  .printTitle h1 {
+    margin: 0;
+    font-size: 20pt;
+    line-height: 1.1;
+  }
+
+  .printTitle p {
+    margin-bottom: 0;
+  }
+
+  .printMetrics {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    margin: 14px 0;
+    border: 1px solid #d8dcd2;
+    background: #f5f6f2;
+    break-inside: avoid;
+  }
+
+  .printMetrics > div {
+    min-width: 0;
+    padding: 10px 8px;
+    border-right: 1px solid #d8dcd2;
+  }
+
+  .printMetrics > div:last-child {
+    border-right: 0;
+  }
+
+  .printMetrics span,
+  .printMetrics strong {
+    display: block;
+  }
+
+  .printMetrics span {
+    color: #647087;
+    font-size: 6.5pt;
+    text-transform: uppercase;
+  }
+
+  .printMetrics strong {
+    margin-top: 5px;
+    font-size: 11pt;
+  }
+
+  .printColumns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 22px;
+  }
+
+  .printSection {
+    margin-top: 14px;
+  }
+
+  .printColumns .printSection {
+    margin-top: 0;
+    break-inside: avoid;
+  }
+
+  .printSection h2 {
+    margin: 0 0 7px;
+    font-size: 11pt;
+  }
+
+  .printSection table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  .printSection thead {
+    display: table-header-group;
+  }
+
+  .printSection tr {
+    break-inside: avoid;
+  }
+
+  .printSection th,
+  .printSection td {
+    padding: 5px 6px;
+    border: 1px solid #d8dcd2;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .printSection thead th {
+    background: var(--primary, #596b18);
+    color: var(--primary-foreground, #ffffff);
+    font-weight: 700;
+  }
+
+  .printSection tbody tr:nth-child(even) {
+    background: #f5f6f2;
+  }
+
+  .printSection td:not(:first-child),
+  .printSection tbody th + td {
+    text-align: right;
+  }
+
+  .printOrdersTable {
+    font-size: 6.4pt;
+  }
+
+  .printOrdersTable th:nth-child(1) { width: 6%; }
+  .printOrdersTable th:nth-child(2) { width: 6%; }
+  .printOrdersTable th:nth-child(3) { width: 14%; }
+  .printOrdersTable th:nth-child(4) { width: 25%; }
+  .printOrdersTable th:nth-child(5) { width: 9%; }
+  .printOrdersTable th:nth-child(6) { width: 15%; }
+  .printOrdersTable th:nth-child(7) { width: 8%; }
+  .printOrdersTable th:nth-child(8) { width: 8%; }
+  .printOrdersTable th:nth-child(9) { width: 9%; }
+
+  .printOrdersTable td:not(:first-child) {
+    text-align: left;
+  }
+
+  .printOrdersTable td:nth-child(7),
+  .printOrdersTable td:nth-child(8),
+  .printOrdersTable td:nth-child(9) {
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .printFooter {
+    margin-top: 14px;
+    padding-top: 8px;
+    border-top: 1px solid #d8dcd2;
+    color: #647087;
+    font-size: 7pt;
+  }
+}

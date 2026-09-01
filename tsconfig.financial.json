@@ -1,0 +1,23 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "incremental": false,
+    "noEmit": true,
+    "paths": {
+      "@/*": ["./*"],
+      "@prodexy/ui": ["./features/financial/type-support/prodexy-ui.ts"]
+    }
+  },
+  "include": [
+    "app/admin/financeiro/**/*.tsx",
+    "app/api/admin/financeiro/**/*.ts",
+    "features/financial/**/*.ts",
+    "features/financial/**/*.tsx",
+    "lib/supabaseServer.ts",
+    "lib/format-os-number.ts",
+    "branding/brand.ts",
+    "components/admin-page.tsx",
+    "components/list-pagination.tsx"
+  ],
+  "exclude": ["node_modules"]
+}
