@@ -7,6 +7,7 @@ const codesMigrationPath = new URL('../script/migration_codigos_repasses_parceri
 const pagePath = new URL('../app/admin/produtos/page.tsx', import.meta.url)
 const dialogPath = new URL('../components/product-dialog.tsx', import.meta.url)
 const labelPath = new URL('../features/products/print/product-label.ts', import.meta.url)
+const sharedTableStylesPath = new URL('../components/admin-data-table.module.css', import.meta.url)
 
 test('a migration é aditiva e preserva o cadastro existente', async () => {
   const migration = await readFile(migrationPath, 'utf8')
@@ -54,10 +55,42 @@ test('a venda preserva código e custo do produto para o relatório histórico',
   assert.doesNotMatch(migration, /drop\s+(table|column)/i)
 })
 
-test('a página usa tabela completa e concentra as operações no menu de ações', async () => {
-  const page = await readFile(pagePath, 'utf8')
+test('a página usa tabela compacta, responsiva e concentra as operações no menu de ações', async () => {
+  const [page, sharedStyles] = await Promise.all([
+    readFile(pagePath, 'utf8'),
+    readFile(sharedTableStylesPath, 'utf8'),
+  ])
+  const table = page.match(/<table[\s\S]*?<\/table>/)?.[0] || ''
 
-  assert.match(page, /<table/)
+  assert.match(table, /<table/)
+  for (const header of [
+    'Código',
+    'Setor',
+    'Nome da peça',
+    'Marca',
+    'Estoque',
+    'Custo',
+    'Preço de venda',
+    'Mão de obra',
+    'Valor total',
+    'Margem',
+    'Ações',
+  ]) {
+    assert.match(table, new RegExp(`>${header}<`))
+  }
+  for (const detailOnlyHeader of [
+    'Referência',
+    'Função',
+    'Aplicação',
+    'Especificações',
+    'Observações',
+  ]) {
+    assert.doesNotMatch(table, new RegExp(`>${detailOnlyHeader}<`))
+  }
+  assert.match(page, /admin-data-table\.module\.css/)
+  assert.match(sharedStyles, /max-width: 100%/)
+  assert.match(sharedStyles, /overflow-x: auto/)
+  assert.doesNotMatch(sharedStyles, /2460px/)
   assert.match(page, /MoreHorizontal/)
   assert.match(page, /Ver informações/)
   assert.match(page, /Imprimir etiqueta/)
@@ -66,11 +99,12 @@ test('a página usa tabela completa e concentra as operações no menu de açõe
   assert.match(page, /Margem/)
 })
 
-test('a etiqueta usa largura térmica e os campos definidos no anexo', async () => {
+test('a impressão do produto é uma ficha térmica simples, sem elementos decorativos', async () => {
   const label = await readFile(labelPath, 'utf8')
 
   assert.match(label, /html, body \{ width: 75mm/)
   assert.match(label, /@page \{ size: auto/)
+  assert.match(label, /border-bottom: 1px dotted #000/)
   for (const field of [
     'Código',
     'Setor',
@@ -87,6 +121,18 @@ test('a etiqueta usa largura térmica e os campos definidos no anexo', async () 
     'Valor total',
   ]) {
     assert.match(label, new RegExp(field))
+  }
+  for (const removedElement of [
+    /branding\/brand/,
+    /logoUrl/,
+    /product-photo/,
+    /photo-placeholder/,
+    /class="header"/,
+    /class="primary"/,
+    /class="financial"/,
+    /class="money-row"/,
+  ]) {
+    assert.doesNotMatch(label, removedElement)
   }
   assert.doesNotMatch(label, /Controle interno: custo/)
 })

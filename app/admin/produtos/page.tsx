@@ -31,12 +31,12 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { AdminPage, AdminPageHeader } from '@/components/admin-page'
+import tableStyles from '@/components/admin-data-table.module.css'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { ListPagination } from '@/components/list-pagination'
 import { ListFilterGroup, ListSearch, ListState, ListToolbar } from '@/components/list-toolbar'
 import { ProductDialog } from '@/components/product-dialog'
 import { ProductDetailsDialog } from '@/features/products/components/product-details-dialog'
-import styles from '@/features/products/components/products-table.module.css'
 import {
   PRODUCT_SELECT,
   getProductMargin,
@@ -96,7 +96,7 @@ function StockBadge({ quantity }: { quantity: number }) {
 
 function TableText({ value }: { value: string | null }) {
   const display = value?.trim() || '-'
-  return <span className={styles.cellText} title={display}>{display}</span>
+  return <span className={tableStyles.cellText} title={display}>{display}</span>
 }
 
 function SummaryCard({ title, value, description, icon: Icon }: {
@@ -357,31 +357,26 @@ export default function Page() {
           </ListToolbar>
         </CardHeader>
 
-        <CardContent className="space-y-4">
-          <p className={`${styles.scrollHint} text-xs text-muted-foreground`}>Deslize a tabela horizontalmente para consultar todas as informações.</p>
+        <CardContent className="min-w-0 space-y-4">
+          <p className="text-xs text-muted-foreground xl:hidden">Em telas menores, deslize somente a tabela para consultar as colunas financeiras.</p>
           <ListState loading={loading} loadingText="Carregando produtos..." empty={!loading && filteredProducts.length === 0} emptyText="Nenhum produto encontrado." />
 
           {!loading && filteredProducts.length > 0 && (
-            <div className={styles.tableViewport}>
-              <table className={styles.table}>
+            <div className={tableStyles.tableScroller}>
+              <table className={`${tableStyles.dataTable} ${tableStyles.productTable}`}>
                 <thead>
                   <tr>
-                    <th className={styles.codeColumn}>Código</th>
-                    <th>Setor</th>
-                    <th className={styles.nameColumn}>Nome da peça</th>
-                    <th className={styles.shortTextColumn}>Referência</th>
-                    <th className={styles.shortTextColumn}>Marca</th>
-                    <th className={styles.longTextColumn}>Função</th>
-                    <th className={styles.longTextColumn}>Aplicação</th>
-                    <th className={styles.longTextColumn}>Especificações</th>
-                    <th className={styles.longTextColumn}>Observações</th>
-                    <th>Estoque</th>
-                    <th className={styles.numericColumn}>Custo</th>
-                    <th className={styles.numericColumn}>Preço de venda</th>
-                    <th className={styles.numericColumn}>Mão de obra</th>
-                    <th className={styles.numericColumn}>Valor total</th>
-                    <th className={styles.numericColumn}>Margem</th>
-                    <th className={styles.actionsColumn}>Ações</th>
+                    <th className={tableStyles.codeColumn}>Código</th>
+                    <th className={tableStyles.sectorColumn}>Setor</th>
+                    <th className={tableStyles.nameColumn}>Nome da peça</th>
+                    <th className={tableStyles.brandColumn}>Marca</th>
+                    <th className={tableStyles.stockColumn}>Estoque</th>
+                    <th className={`${tableStyles.numeric} ${tableStyles.moneyColumn}`}>Custo</th>
+                    <th className={`${tableStyles.numeric} ${tableStyles.moneyColumn}`}>Preço de venda</th>
+                    <th className={`${tableStyles.numeric} ${tableStyles.moneyColumn}`}>Mão de obra</th>
+                    <th className={`${tableStyles.numeric} ${tableStyles.moneyColumn}`}>Valor total</th>
+                    <th className={`${tableStyles.numeric} ${tableStyles.marginColumn}`}>Margem</th>
+                    <th className={tableStyles.actionsColumn}>Ações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -392,25 +387,20 @@ export default function Page() {
 
                     return (
                       <tr key={product.id}>
-                        <td className={`${styles.codeColumn} font-semibold`}>
+                        <td className={`${tableStyles.codeColumn} font-semibold`}>
                           <span>{product.codigo || '-'}</span>
                           {isPartnerProductCode(product.codigo) && <Badge variant="secondary" className="mt-1 block w-fit text-[10px]">Parceria</Badge>}
                         </td>
-                        <td>{product.setor || '-'}</td>
-                        <td className={styles.nameColumn}><TableText value={product.nome} /></td>
-                        <td className={styles.shortTextColumn}><TableText value={product.referencia} /></td>
-                        <td className={styles.shortTextColumn}><TableText value={product.marca || product.marca_modelo} /></td>
-                        <td className={styles.longTextColumn}><TableText value={product.funcao} /></td>
-                        <td className={styles.longTextColumn}><TableText value={product.aplicacao} /></td>
-                        <td className={styles.longTextColumn}><TableText value={product.especificacoes} /></td>
-                        <td className={styles.longTextColumn}><TableText value={product.observacoes} /></td>
-                        <td><StockBadge quantity={product.quantidade_estoque} /></td>
-                        <td className={styles.numericColumn}>{formatCurrency(product.valor_custo)}</td>
-                        <td className={`${styles.numericColumn} font-semibold`}>{formatCurrency(product.valor_unitario)}</td>
-                        <td className={styles.numericColumn}>{formatCurrency(product.mao_de_obra)}</td>
-                        <td className={`${styles.numericColumn} font-semibold`}>{formatCurrency(getProductServiceTotal(product))}</td>
-                        <td className={`${styles.numericColumn} ${margin < 0 ? 'text-destructive' : 'text-emerald-700'}`}>{formatCurrency(margin)}<br /><span className="text-xs">{marginPercentage.toFixed(1)}%</span></td>
-                        <td className={styles.actionsColumn}>
+                        <td className={tableStyles.sectorColumn}>{product.setor || '-'}</td>
+                        <td className={tableStyles.nameColumn}><TableText value={product.nome} /></td>
+                        <td className={tableStyles.brandColumn}><TableText value={product.marca || product.marca_modelo} /></td>
+                        <td className={tableStyles.stockColumn}><StockBadge quantity={product.quantidade_estoque} /></td>
+                        <td className={`${tableStyles.numeric} ${tableStyles.moneyColumn}`}>{formatCurrency(product.valor_custo)}</td>
+                        <td className={`${tableStyles.numeric} ${tableStyles.moneyColumn} font-semibold`}>{formatCurrency(product.valor_unitario)}</td>
+                        <td className={`${tableStyles.numeric} ${tableStyles.moneyColumn}`}>{formatCurrency(product.mao_de_obra)}</td>
+                        <td className={`${tableStyles.numeric} ${tableStyles.moneyColumn} font-semibold`}>{formatCurrency(getProductServiceTotal(product))}</td>
+                        <td className={`${tableStyles.numeric} ${tableStyles.marginColumn} ${margin < 0 ? 'text-destructive' : 'text-emerald-700'}`}>{formatCurrency(margin)}<br /><span className="text-xs">{marginPercentage.toFixed(1)}%</span></td>
+                        <td className={tableStyles.actionsColumn}>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label={`Ações de ${product.nome}`} disabled={updatingStock}>

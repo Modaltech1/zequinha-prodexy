@@ -14,6 +14,12 @@ A página `/admin/produtos` passou a trabalhar com o catálogo técnico e financ
 - visualização completa, edição, ajustes rápidos de estoque, impressão e exclusão pelo menu de três pontos;
 - impressão térmica individual com 80 mm de largura.
 
+## Organização da listagem
+
+A tabela principal exibe somente código, setor, nome da peça, marca, estoque, custo, preço de venda, mão de obra, valor total, margem e ações. Referência, função, aplicação, especificações, observações e foto permanecem disponíveis em “Ver informações” e na edição.
+
+Produtos e Financeiro usam o mesmo estilo compartilhado de tabela. Em telas menores, a rolagem horizontal fica restrita ao contêiner da tabela e não aumenta a largura da página.
+
 O campo de banco `valor_unitario` continua sendo o preço de venda. Ele não foi renomeado para preservar a integração atual com as ordens de serviço.
 
 ## Migration obrigatória
@@ -53,7 +59,7 @@ Ao usar “Imprimir etiqueta”, selecione no navegador:
 - cabeçalhos e rodapés do navegador desativados;
 - margens padrão da aplicação.
 
-A altura da etiqueta acompanha o conteúdo do produto. Foto, descrição técnica e observações extensas aumentam o comprimento impresso.
+A ficha usa uma área útil de 75 mm dentro da bobina de 80 mm e não possui cabeçalho, logomarca, foto, caixas ou destaques financeiros. Todos os dados são apresentados em sequência, separados somente por linhas pontilhadas. A altura acompanha o conteúdo; descrições técnicas e observações extensas aumentam o comprimento impresso.
 
 ## Validação recomendada
 

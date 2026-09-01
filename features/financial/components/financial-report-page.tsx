@@ -29,6 +29,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { AdminPage, AdminPageHeader } from '@/components/admin-page'
+import tableStyles from '@/components/admin-data-table.module.css'
 import { ListPagination } from '@/components/list-pagination'
 import { getFinancialReport } from '@/features/financial/client/financial-api'
 import {
@@ -209,17 +210,17 @@ function FinancialBreakdown({ report }: { report: FinancialReport }) {
 
 function LaborTable({ rows }: { rows: CustomerLaborSummary[] }) {
   return (
-    <div className={styles.tableScroller}>
-      <table className={styles.dataTable}>
-        <thead><tr><th>Cliente</th><th className={styles.numeric}>OS</th><th className={styles.numeric}>Mão de obra</th><th className={styles.numeric}>Valor final</th><th className={styles.numeric}>Tíquete médio</th></tr></thead>
+    <div className={tableStyles.tableScroller}>
+      <table className={tableStyles.dataTable}>
+        <thead><tr><th>Cliente</th><th className={tableStyles.numeric}>OS</th><th className={tableStyles.numeric}>Mão de obra</th><th className={tableStyles.numeric}>Valor final</th><th className={tableStyles.numeric}>Tíquete médio</th></tr></thead>
         <tbody>
           {rows.map((row) => (
             <tr key={row.customerId || row.customerName}>
               <td className="font-medium">{row.customerName}</td>
-              <td className={styles.numeric}>{row.orderCount}</td>
-              <td className={styles.numeric}>{formatCurrency(row.laborTotal)}</td>
-              <td className={styles.numeric}>{formatCurrency(row.finalTotal)}</td>
-              <td className={styles.numeric}>{formatCurrency(row.averageTicket)}</td>
+              <td className={tableStyles.numeric}>{row.orderCount}</td>
+              <td className={tableStyles.numeric}>{formatCurrency(row.laborTotal)}</td>
+              <td className={tableStyles.numeric}>{formatCurrency(row.finalTotal)}</td>
+              <td className={tableStyles.numeric}>{formatCurrency(row.averageTicket)}</td>
             </tr>
           ))}
         </tbody>
@@ -230,17 +231,17 @@ function LaborTable({ rows }: { rows: CustomerLaborSummary[] }) {
 
 function ResponsibleLaborTable({ rows }: { rows: ResponsibleLaborSummary[] }) {
   return (
-    <div className={styles.tableScroller}>
-      <table className={styles.dataTable}>
-        <thead><tr><th>Responsável</th><th className={styles.numeric}>OS</th><th className={styles.numeric}>Mão de obra</th><th className={styles.numeric}>Valor final</th><th className={styles.numeric}>Tíquete médio</th></tr></thead>
+    <div className={tableStyles.tableScroller}>
+      <table className={tableStyles.dataTable}>
+        <thead><tr><th>Responsável</th><th className={tableStyles.numeric}>OS</th><th className={tableStyles.numeric}>Mão de obra</th><th className={tableStyles.numeric}>Valor final</th><th className={tableStyles.numeric}>Tíquete médio</th></tr></thead>
         <tbody>
           {rows.map((row) => (
             <tr key={row.responsibleId || row.responsibleName}>
               <td className="font-medium">{row.responsibleName}</td>
-              <td className={styles.numeric}>{row.orderCount}</td>
-              <td className={`${styles.numeric} font-semibold`}>{formatCurrency(row.laborTotal)}</td>
-              <td className={styles.numeric}>{formatCurrency(row.finalTotal)}</td>
-              <td className={styles.numeric}>{formatCurrency(row.averageTicket)}</td>
+              <td className={tableStyles.numeric}>{row.orderCount}</td>
+              <td className={`${tableStyles.numeric} font-semibold`}>{formatCurrency(row.laborTotal)}</td>
+              <td className={tableStyles.numeric}>{formatCurrency(row.finalTotal)}</td>
+              <td className={tableStyles.numeric}>{formatCurrency(row.averageTicket)}</td>
             </tr>
           ))}
         </tbody>
@@ -251,20 +252,20 @@ function ResponsibleLaborTable({ rows }: { rows: ResponsibleLaborSummary[] }) {
 
 function ProductSalesTable({ rows }: { rows: ProductSalesSummary[] }) {
   return (
-    <div className={styles.tableScroller}>
-      <table className={`${styles.dataTable} ${styles.wideTable}`}>
-        <thead><tr><th>Código</th><th>Produto</th><th className={styles.numeric}>OS</th><th className={styles.numeric}>Qtd.</th><th className={styles.numeric}>Receita</th><th className={styles.numeric}>Custo</th><th className={styles.numeric}>Lucro</th><th className={styles.numeric}>Repasse</th></tr></thead>
+    <div className={tableStyles.tableScroller}>
+      <table className={`${tableStyles.dataTable} ${tableStyles.wideTable}`}>
+        <thead><tr><th>Código</th><th>Produto</th><th className={tableStyles.numeric}>OS</th><th className={tableStyles.numeric}>Qtd.</th><th className={tableStyles.numeric}>Receita</th><th className={tableStyles.numeric}>Custo</th><th className={tableStyles.numeric}>Lucro</th><th className={tableStyles.numeric}>Repasse</th></tr></thead>
         <tbody>
           {rows.map((row) => (
             <tr key={`${row.productId}:${row.productCode || ''}`}>
               <td className="font-mono text-xs">{row.productCode || '-'}</td>
               <td className="font-medium">{row.productName}</td>
-              <td className={styles.numeric}>{row.orderCount}</td>
-              <td className={styles.numeric}>{formatQuantity(row.quantity)}</td>
-              <td className={styles.numeric}>{formatCurrency(row.revenue)}</td>
-              <td className={styles.numeric}>{formatCurrency(row.cost)}</td>
-              <td className={styles.numeric}>{formatCurrency(row.profit)}</td>
-              <td className={`${styles.numeric} font-semibold`}>{row.isPartnerProduct ? formatCurrency(row.partnerTransfer) : '-'}</td>
+              <td className={tableStyles.numeric}>{row.orderCount}</td>
+              <td className={tableStyles.numeric}>{formatQuantity(row.quantity)}</td>
+              <td className={tableStyles.numeric}>{formatCurrency(row.revenue)}</td>
+              <td className={tableStyles.numeric}>{formatCurrency(row.cost)}</td>
+              <td className={tableStyles.numeric}>{formatCurrency(row.profit)}</td>
+              <td className={`${tableStyles.numeric} font-semibold`}>{row.isPartnerProduct ? formatCurrency(row.partnerTransfer) : '-'}</td>
             </tr>
           ))}
         </tbody>
@@ -275,22 +276,22 @@ function ProductSalesTable({ rows }: { rows: ProductSalesSummary[] }) {
 
 function PartnerTransferTable({ rows }: { rows: PartnerProductTransferSummary[] }) {
   return (
-    <div className={styles.tableScroller}>
-      <table className={`${styles.dataTable} ${styles.wideTable}`}>
-        <thead><tr><th>Código</th><th>Produto</th><th className={styles.numeric}>OS</th><th className={styles.numeric}>Qtd.</th><th className={styles.numeric}>Venda</th><th className={styles.numeric}>Custo</th><th className={styles.numeric}>Lucro</th><th className={styles.numeric}>80% custo</th><th className={styles.numeric}>10% lucro</th><th className={styles.numeric}>Repasse</th></tr></thead>
+    <div className={tableStyles.tableScroller}>
+      <table className={`${tableStyles.dataTable} ${tableStyles.wideTable}`}>
+        <thead><tr><th>Código</th><th>Produto</th><th className={tableStyles.numeric}>OS</th><th className={tableStyles.numeric}>Qtd.</th><th className={tableStyles.numeric}>Venda</th><th className={tableStyles.numeric}>Custo</th><th className={tableStyles.numeric}>Lucro</th><th className={tableStyles.numeric}>80% custo</th><th className={tableStyles.numeric}>10% lucro</th><th className={tableStyles.numeric}>Repasse</th></tr></thead>
         <tbody>
           {rows.map((row) => (
             <tr key={`${row.productId}:${row.productCode}`}>
               <td className="font-mono text-xs font-semibold">{row.productCode}</td>
               <td className="font-medium">{row.productName}</td>
-              <td className={styles.numeric}>{row.orderCount}</td>
-              <td className={styles.numeric}>{formatQuantity(row.quantity)}</td>
-              <td className={styles.numeric}>{formatCurrency(row.revenue)}</td>
-              <td className={styles.numeric}>{formatCurrency(row.cost)}</td>
-              <td className={styles.numeric}>{formatCurrency(row.profit)}</td>
-              <td className={styles.numeric}>{formatCurrency(row.costShare)}</td>
-              <td className={styles.numeric}>{formatCurrency(row.profitShare)}</td>
-              <td className={`${styles.numeric} font-bold text-primary`}>{formatCurrency(row.transferTotal)}</td>
+              <td className={tableStyles.numeric}>{row.orderCount}</td>
+              <td className={tableStyles.numeric}>{formatQuantity(row.quantity)}</td>
+              <td className={tableStyles.numeric}>{formatCurrency(row.revenue)}</td>
+              <td className={tableStyles.numeric}>{formatCurrency(row.cost)}</td>
+              <td className={tableStyles.numeric}>{formatCurrency(row.profit)}</td>
+              <td className={tableStyles.numeric}>{formatCurrency(row.costShare)}</td>
+              <td className={tableStyles.numeric}>{formatCurrency(row.profitShare)}</td>
+              <td className={`${tableStyles.numeric} font-bold text-primary`}>{formatCurrency(row.transferTotal)}</td>
             </tr>
           ))}
         </tbody>
@@ -301,9 +302,9 @@ function PartnerTransferTable({ rows }: { rows: PartnerProductTransferSummary[] 
 
 function OrdersTable({ orders }: { orders: FinancialOrder[] }) {
   return (
-    <div className={styles.tableScroller}>
-      <table className={styles.dataTable}>
-        <thead><tr><th>Data / OS</th><th>Cliente / veículo</th><th>Itens</th><th>Situação</th><th>Responsável / pagamento</th><th className={styles.numeric}>Base</th><th className={styles.numeric}>Mão de obra</th><th className={styles.numeric}>Final</th></tr></thead>
+    <div className={tableStyles.tableScroller}>
+      <table className={tableStyles.dataTable}>
+        <thead><tr><th>Data / OS</th><th>Cliente / veículo</th><th>Itens</th><th>Situação</th><th>Responsável / pagamento</th><th className={tableStyles.numeric}>Base</th><th className={tableStyles.numeric}>Mão de obra</th><th className={tableStyles.numeric}>Final</th></tr></thead>
         <tbody>
           {orders.map((order) => (
             <tr key={order.id}>
@@ -312,9 +313,9 @@ function OrdersTable({ orders }: { orders: FinancialOrder[] }) {
               <td className="max-w-[320px] text-muted-foreground">{order.itemsLabel}</td>
               <td><span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${statusClasses(order.status)}`}>{FINANCIAL_STATUS_LABELS[order.status]}</span></td>
               <td><strong>{order.responsibleName}</strong><br /><span className="text-muted-foreground">{order.paymentMethod}</span></td>
-              <td className={styles.numeric}>{formatCurrency(order.baseTotal)}</td>
-              <td className={styles.numeric}>{formatCurrency(order.labor)}</td>
-              <td className={`${styles.numeric} font-semibold`}>{formatCurrency(order.finalTotal)}</td>
+              <td className={tableStyles.numeric}>{formatCurrency(order.baseTotal)}</td>
+              <td className={tableStyles.numeric}>{formatCurrency(order.labor)}</td>
+              <td className={`${tableStyles.numeric} font-semibold`}>{formatCurrency(order.finalTotal)}</td>
             </tr>
           ))}
         </tbody>

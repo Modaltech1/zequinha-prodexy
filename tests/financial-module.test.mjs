@@ -59,3 +59,13 @@ test('o relatório exibe mão de obra agrupada por responsável na tela e no PDF
   assert.match(page, /report\.laborByResponsible/)
   assert.match(page, /Divisão das OS e dos valores de mão de obra/)
 })
+
+test('Produtos e Financeiro reutilizam o mesmo padrão visual de tabela', async () => {
+  const [financialPage, productPage] = await Promise.all([
+    readFile(reportPagePath, 'utf8'),
+    readFile(new URL('../app/admin/produtos/page.tsx', import.meta.url), 'utf8'),
+  ])
+
+  assert.match(financialPage, /admin-data-table\.module\.css/)
+  assert.match(productPage, /admin-data-table\.module\.css/)
+})

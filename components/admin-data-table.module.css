@@ -1,0 +1,102 @@
+.tableScroller {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+
+.dataTable {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.productTable {
+  min-width: 1080px;
+  table-layout: fixed;
+  font-size: 0.8125rem;
+}
+
+.wideTable {
+  min-width: 1180px;
+}
+
+.dataTable th,
+.dataTable td {
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.dataTable th {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.dataTable tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.dataTable tbody tr:hover {
+  background: hsl(var(--muted) / 0.45);
+}
+
+.numeric {
+  text-align: right !important;
+  white-space: nowrap;
+}
+
+.codeColumn {
+  width: 112px;
+}
+
+.sectorColumn {
+  width: 64px;
+}
+
+.nameColumn {
+  width: 190px;
+}
+
+.brandColumn {
+  width: 112px;
+}
+
+.stockColumn {
+  width: 108px;
+}
+
+.moneyColumn {
+  width: 104px;
+}
+
+.marginColumn {
+  width: 112px;
+}
+
+.actionsColumn {
+  width: 56px;
+  text-align: center !important;
+}
+
+.cellText {
+  display: -webkit-box;
+  overflow: hidden;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+@media (max-width: 1279px) {
+  .productTable {
+    min-width: 1040px;
+  }
+}
