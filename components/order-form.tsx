@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Button,
   Input,
@@ -12,8 +12,9 @@ import {
   SelectValue,
   Textarea,
 } from '@prodexy/ui'
-import { Plus, Trash2, ArrowLeft, Check, ChevronDown, Search, X } from 'lucide-react'
+import { Plus, Trash2, ArrowLeft } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
+import { SearchCombobox } from '@/components/search-combobox'
 
 type ClienteOption = {
   id: string
@@ -44,161 +45,8 @@ type ProdutoOption = {
   valor_unitario: number
 }
 
-function normalizeSearch(value: string) {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim()
-}
-
 function formatProductLabel(produto: ProdutoOption) {
   return [produto.nome, produto.marca_modelo, produto.codigo].filter(Boolean).join(' - ')
-}
-
-function ProductSearchCombobox({ products, value, onValueChange }: {
-  products: ProdutoOption[]
-  value: string
-  onValueChange: (value: string) => void
-}) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const previousValueRef = useRef(value)
-  const skipNextValueSyncRef = useRef(false)
-  const [query, setQuery] = useState('')
-  const [open, setOpen] = useState(false)
-  const [activeIndex, setActiveIndex] = useState(0)
-  const selectedProduct = products.find((product) => product.id === value)
-
-  useEffect(() => {
-    if (value === previousValueRef.current) return
-    previousValueRef.current = value
-    if (skipNextValueSyncRef.current) {
-      skipNextValueSyncRef.current = false
-      return
-    }
-    setQuery(selectedProduct ? formatProductLabel(selectedProduct) : '')
-  }, [value, selectedProduct])
-
-  const filteredProducts = useMemo(() => {
-    const terms = normalizeSearch(query).split(/\s+/).filter(Boolean)
-    const results = terms.length === 0
-      ? products
-      : products.filter((product) => {
-          const searchable = normalizeSearch([product.nome, product.marca_modelo, product.codigo].filter(Boolean).join(' '))
-          return terms.every((term) => searchable.includes(term))
-        })
-
-    return results.slice(0, 30)
-  }, [products, query])
-
-  function selectProduct(product: ProdutoOption) {
-    onValueChange(product.id)
-    setQuery(formatProductLabel(product))
-    setOpen(false)
-  }
-
-  return (
-    <div
-      ref={containerRef}
-      className="relative"
-      onBlur={(event) => {
-        if (!containerRef.current?.contains(event.relatedTarget as Node | null)) setOpen(false)
-      }}
-    >
-      <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          role="combobox"
-          aria-autocomplete="list"
-          aria-expanded={open}
-          aria-controls="product-search-results"
-          aria-activedescendant={open && filteredProducts[activeIndex] ? `product-option-${filteredProducts[activeIndex].id}` : undefined}
-          value={query}
-          placeholder="Digite o nome, marca ou código do produto"
-          className="pr-16 pl-9"
-          autoComplete="off"
-          onFocus={() => setOpen(true)}
-          onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
-            setQuery(event.target.value)
-            skipNextValueSyncRef.current = true
-            onValueChange('')
-            setActiveIndex(0)
-            setOpen(true)
-          }}
-          onKeyDown={(event: React.KeyboardEvent<HTMLInputElement>) => {
-            if (event.key === 'ArrowDown') {
-              event.preventDefault()
-              setOpen(true)
-              setActiveIndex((current) => filteredProducts.length ? Math.min(current + 1, filteredProducts.length - 1) : 0)
-            } else if (event.key === 'ArrowUp') {
-              event.preventDefault()
-              setActiveIndex((current) => Math.max(current - 1, 0))
-            } else if (event.key === 'Enter' && open && filteredProducts[activeIndex]) {
-              event.preventDefault()
-              selectProduct(filteredProducts[activeIndex])
-            } else if (event.key === 'Escape') {
-              setOpen(false)
-            }
-          }}
-        />
-        {query && (
-          <button
-            type="button"
-            aria-label="Limpar busca de produto"
-            className="absolute right-9 top-1/2 -translate-y-1/2 rounded-sm p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-            onClick={() => {
-              setQuery('')
-              skipNextValueSyncRef.current = true
-              onValueChange('')
-              setActiveIndex(0)
-              setOpen(true)
-            }}
-          >
-            <X className="h-4 w-4" />
-          </button>
-        )}
-        <button
-          type="button"
-          aria-label={open ? 'Fechar lista de produtos' : 'Abrir lista de produtos'}
-          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-          onClick={() => setOpen((current) => !current)}
-        >
-          <ChevronDown className={`h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`} />
-        </button>
-      </div>
-
-      {open && (
-        <div id="product-search-results" role="listbox" className="absolute z-50 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border bg-popover p-1 text-popover-foreground shadow-lg">
-          {filteredProducts.length > 0 ? filteredProducts.map((product, index) => (
-            <button
-              id={`product-option-${product.id}`}
-              key={product.id}
-              type="button"
-              role="option"
-              aria-selected={product.id === value}
-              className={`flex w-full items-start gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors ${index === activeIndex ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/60'}`}
-              onMouseDown={(event) => event.preventDefault()}
-              onMouseEnter={() => setActiveIndex(index)}
-              onClick={() => selectProduct(product)}
-            >
-              <Check className={`mt-0.5 h-4 w-4 shrink-0 ${product.id === value ? 'opacity-100' : 'opacity-0'}`} />
-              <span className="min-w-0">
-                <span className="block truncate font-medium">{product.nome}{product.marca_modelo ? ` - ${product.marca_modelo}` : ''}</span>
-                <span className="block truncate text-xs text-muted-foreground">
-                  {product.codigo ? `Código: ${product.codigo} • ` : ''}Estoque: {product.quantidade_estoque} • R$ {product.valor_unitario.toFixed(2)}
-                </span>
-              </span>
-            </button>
-          )) : (
-            <p className="px-3 py-6 text-center text-sm text-muted-foreground">Nenhum produto encontrado para “{query}”.</p>
-          )}
-          {products.length > 30 && filteredProducts.length === 30 && (
-            <p className="border-t px-3 py-2 text-xs text-muted-foreground">Mostrando os 30 primeiros resultados. Continue digitando para refinar.</p>
-          )}
-        </div>
-      )}
-    </div>
-  )
 }
 
 type CollaboratorOption = {
@@ -1727,20 +1575,21 @@ export function OrderForm({
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="flex-1">
-              <Select value={novoServicoId} onValueChange={setNovoServicoId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um serviço para adicionar" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableServicesToAdd.map((servico) => (
-                    <SelectItem key={servico.id} value={servico.id}>
-                      {servico.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchCombobox
+                items={availableServicesToAdd}
+                value={novoServicoId}
+                onValueChange={setNovoServicoId}
+                getItemLabel={(servico) => servico.nome}
+                getItemSearchText={(servico) => servico.nome}
+                placeholder="Digite o nome do serviço"
+                itemName="serviços"
+                emptyMessage={(query) => `Nenhum serviço encontrado para “${query}”.`}
+                renderItem={(servico) => (
+                  <span className="block truncate font-medium">{servico.nome}</span>
+                )}
+              />
             </div>
-            <Button type="button" onClick={handleAddServico} className="w-full gap-2 sm:w-auto">
+            <Button type="button" onClick={handleAddServico} disabled={!novoServicoId} className="w-full gap-2 sm:w-auto">
               <Plus className="h-4 w-4" />
               Adicionar serviço
             </Button>
@@ -1809,7 +1658,24 @@ export function OrderForm({
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="flex-1">
-              <ProductSearchCombobox products={availableProductsToAdd} value={novoProdutoId} onValueChange={setNovoProdutoId} />
+              <SearchCombobox
+                items={availableProductsToAdd}
+                value={novoProdutoId}
+                onValueChange={setNovoProdutoId}
+                getItemLabel={formatProductLabel}
+                getItemSearchText={(produto) => [produto.nome, produto.marca_modelo, produto.codigo].filter(Boolean).join(' ')}
+                placeholder="Digite o nome, marca ou código do produto"
+                itemName="produtos"
+                emptyMessage={(query) => `Nenhum produto encontrado para “${query}”.`}
+                renderItem={(produto) => (
+                  <>
+                    <span className="block truncate font-medium">{produto.nome}{produto.marca_modelo ? ` - ${produto.marca_modelo}` : ''}</span>
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {produto.codigo ? `Código: ${produto.codigo} • ` : ''}Estoque: {produto.quantidade_estoque} • R$ {produto.valor_unitario.toFixed(2)}
+                    </span>
+                  </>
+                )}
+              />
             </div>
             <Button type="button" onClick={handleAddProduto} disabled={!novoProdutoId} className="w-full gap-2 sm:w-auto">
               <Plus className="h-4 w-4" />
