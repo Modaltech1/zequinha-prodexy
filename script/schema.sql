@@ -1,3 +1,6 @@
+-- Schema geral de referência do banco de dados.
+-- Para atualizar uma base existente, execute também as migrations incrementais deste diretório.
+
 create table public.clientes (
   id uuid not null default gen_random_uuid (),
   nome text not null,
@@ -44,6 +47,7 @@ create table public.ordens_de_servico (
   valor_total numeric(12, 2) null default 0,
   valor_final numeric(12, 2) null default 0,
   status text null default 'em_andamento'::text,
+  reclame text null,
   observacoes text null,
   criado_por uuid null,
   criado_em timestamp with time zone null default now(),

@@ -4,6 +4,7 @@ export type PrintableOrder = {
   status: string
   valor_total: number
   valor_final: number
+  reclame?: string | null
   observacoes: string | null
   criado_em: string
   atualizado_em: string | null
@@ -110,9 +111,9 @@ export function buildOrderPrintHtml(order: PrintableOrder, logoUrl?: string) {
       return `<li>${parts.join(' • ')}</li>`
     }).join('')
     : '<li>Nenhum produto registrado.</li>'
-  const diagnosticsHtml = order.diagnosticos.length
-    ? order.diagnosticos.map((item) => `<li>${escapeHtml(item.descricao)}</li>`).join('')
-    : '<li>Nenhum diagnóstico não autorizado registrado.</li>'
+  const diagnosticsHtml = order.diagnosticos
+    .map((item) => `<li>${escapeHtml(item.descricao)}</li>`)
+    .join('')
   const photosHtml = (order.fotos?.length ?? 0) > 0
     ? order.fotos!
       .map(
@@ -120,7 +121,16 @@ export function buildOrderPrintHtml(order: PrintableOrder, logoUrl?: string) {
           `<figure class="photo-item"><img src="${escapeHtml(foto.foto_url)}" alt="Foto da OS" loading="eager" /></figure>`
       )
       .join('')
-    : '<p class="muted">Nenhuma foto registrada.</p>'
+    : ''
+
+  const optionalSections = [
+    order.reclame
+      ? `<section class="section note-section"><h3>Reclame</h3><p>${escapeHtml(order.reclame)}</p></section>`
+      : '',
+    order.observacoes
+      ? `<section class="section note-section"><h3>Observações</h3><p>${escapeHtml(order.observacoes)}</p></section>`
+      : '',
+  ].filter(Boolean).join('')
 
   return `<!doctype html>
 <html lang="pt-BR">
@@ -128,39 +138,48 @@ export function buildOrderPrintHtml(order: PrintableOrder, logoUrl?: string) {
   <meta charset="utf-8" />
   <title>OS ${escapeHtml(order.numero)}</title>
   <style>
-    @page { size: A4; margin: 14mm; }
+    @page { size: A4; margin: 7mm; }
     * { box-sizing: border-box; }
-    body { font-family: Arial, Helvetica, sans-serif; color: #111827; margin: 0; font-size: 12px; line-height: 1.45; }
-    .sheet { width: 100%; }
-    .header { display: flex; justify-content: space-between; gap: 24px; border-bottom: 2px solid #111827; padding-bottom: 12px; margin-bottom: 16px; }
-    .brand-row { display: flex; align-items: center; gap: 12px; }
-    .brand-logo { width: 72px; height: 72px; object-fit: contain; flex-shrink: 0; }
-    .brand h1 { margin: 0 0 4px; font-size: 20px; }
+    html, body { width: 100%; margin: 0; padding: 0; }
+    body { font-family: Arial, Helvetica, sans-serif; color: #111827; font-size: 9.5px; line-height: 1.25; }
+    .sheet { width: 100%; transform-origin: top left; }
+    .header { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1.5px solid #111827; padding-bottom: 6px; margin-bottom: 6px; }
+    .brand-row { display: flex; align-items: center; gap: 8px; }
+    .brand-logo { width: 46px; height: 46px; object-fit: contain; flex-shrink: 0; }
+    .brand h1 { margin: 0 0 2px; font-size: 16px; }
     .muted { color: #4b5563; }
     .os-title { text-align: right; }
-    .os-title h2 { margin: 0 0 6px; font-size: 18px; }
-    .section { border: 1px solid #d1d5db; border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; break-inside: avoid; }
-    .section h3 { margin: 0 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; }
-    .label { color: #4b5563; font-size: 11px; display: block; }
+    .os-title h2 { margin: 0 0 3px; font-size: 15px; }
+    .summary-grid, .items-grid, .notes-grid, .closing-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; align-items: start; }
+    .items-grid > .section:only-child, .notes-grid > .section:only-child { grid-column: 1 / -1; }
+    .section { border: 1px solid #d1d5db; border-radius: 5px; padding: 6px 7px; margin-bottom: 6px; break-inside: avoid; page-break-inside: avoid; }
+    .section h3 { margin: 0 0 4px; font-size: 10px; text-transform: uppercase; letter-spacing: .035em; }
+    .section p { margin: 0; white-space: pre-wrap; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 9px; }
+    .label { color: #4b5563; font-size: 8.5px; display: block; }
     .value { font-weight: 700; }
-    ul { margin: 6px 0 0 18px; padding: 0; }
-    li { margin-bottom: 4px; }
-    .financial-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+    ul { margin: 2px 0 0 14px; padding: 0; }
+    li { margin-bottom: 2px; }
+    li:last-child { margin-bottom: 0; }
+    .financial-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
     .financial-row:last-child { margin-bottom: 0; }
     .financial-row.discount { color: #b91c1c; }
-    .financial-row.final { border-top: 1px solid #d1d5db; margin-top: 8px; padding-top: 8px; font-size: 15px; font-weight: 700; }
-    .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 34px; }
-    .signature { border-top: 1px solid #111827; padding-top: 8px; text-align: center; }
-    .terms { font-size: 11px; color: #374151; }
+    .financial-row.final { border-top: 1px solid #d1d5db; margin-top: 4px; padding-top: 4px; font-size: 11px; font-weight: 700; }
+    .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 18px; }
+    .signature { border-top: 1px solid #111827; padding-top: 4px; text-align: center; }
+    .terms { font-size: 8px; line-height: 1.2; color: #374151; }
     .legal-section { border-color: #9ca3af; background: #f9fafb; }
-    .legal-section .terms { margin: 0 0 7px; text-align: justify; }
+    .legal-section .terms { margin: 0 0 3px; text-align: justify; }
     .legal-section .terms:last-child { margin-bottom: 0; }
-    .warranty-note { margin-top: 8px; font-weight: 600; }
-    .photos-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 8px; }
+    .warranty-note { margin-top: 3px !important; font-weight: 600; }
+    .photos-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-top: 3px; }
     .photo-item { margin: 0; break-inside: avoid; page-break-inside: avoid; }
-    .photo-item img { width: 100%; max-height: 200px; object-fit: cover; border: 1px solid #d1d5db; border-radius: 4px; display: block; }
-    @media print { .no-print { display: none; } }
+    .photo-item img { width: 100%; height: 56px; object-fit: cover; border: 1px solid #d1d5db; border-radius: 3px; display: block; }
+    .declaration { margin: 2px 0 6px; }
+    @media print {
+      .no-print { display: none; }
+      html, body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    }
   </style>
 </head>
 <body>
@@ -186,53 +205,43 @@ export function buildOrderPrintHtml(order: PrintableOrder, logoUrl?: string) {
       </div>
     </div>
 
-    <section class="section">
-      <h3>Cliente</h3>
-      <div class="grid">
-        <div><span class="label">Nome</span><span class="value">${escapeHtml(order.cliente_nome)}</span></div>
-        <div><span class="label">CPF/CNPJ</span><span class="value">${escapeHtml(order.cliente_cpf_cnpj || '-')}</span></div>
-        <div><span class="label">Telefone</span><span class="value">${escapeHtml(order.cliente_telefone || '-')}</span></div>
-      </div>
-    </section>
+    <div class="summary-grid">
+      <section class="section">
+        <h3>Cliente</h3>
+        <div class="grid">
+          <div><span class="label">Nome</span><span class="value">${escapeHtml(order.cliente_nome)}</span></div>
+          ${order.cliente_cpf_cnpj ? `<div><span class="label">CPF/CNPJ</span><span class="value">${escapeHtml(order.cliente_cpf_cnpj)}</span></div>` : ''}
+          ${order.cliente_telefone ? `<div><span class="label">Telefone</span><span class="value">${escapeHtml(order.cliente_telefone)}</span></div>` : ''}
+        </div>
+      </section>
 
-    <section class="section">
-      <h3>Veículo</h3>
-      <div class="grid">
-        <div><span class="label">Veículo</span><span class="value">${escapeHtml(vehicle || '-')}</span></div>
-        <div><span class="label">Placa</span><span class="value">${escapeHtml(order.veiculo_placa || '-')}</span></div>
-        <div><span class="label">Cor</span><span class="value">${escapeHtml(order.veiculo_cor || '-')}</span></div>
-        <div><span class="label">KM entrada</span><span class="value">${escapeHtml(order.km_entrada ?? '-')}</span></div>
-        <div><span class="label">Tem seguro?</span><span class="value">${order.veiculo_tem_seguro ? 'Sim' : 'Não'}</span></div>
-      </div>
-    </section>
+      <section class="section">
+        <h3>Veículo</h3>
+        <div class="grid">
+          ${vehicle ? `<div><span class="label">Veículo</span><span class="value">${escapeHtml(vehicle)}</span></div>` : ''}
+          ${order.veiculo_placa ? `<div><span class="label">Placa</span><span class="value">${escapeHtml(order.veiculo_placa)}</span></div>` : ''}
+          ${order.veiculo_cor ? `<div><span class="label">Cor</span><span class="value">${escapeHtml(order.veiculo_cor)}</span></div>` : ''}
+          ${order.km_entrada != null ? `<div><span class="label">KM entrada</span><span class="value">${escapeHtml(order.km_entrada)}</span></div>` : ''}
+          <div><span class="label">Tem seguro?</span><span class="value">${order.veiculo_tem_seguro ? 'Sim' : 'Não'}</span></div>
+        </div>
+      </section>
+    </div>
 
-    <section class="section">
-      <h3>Serviços autorizados na OS</h3>
-      <ul>${servicesHtml}</ul>
-    </section>
+    <div class="items-grid">
+      <section class="section">
+        <h3>Serviços autorizados</h3>
+        <ul>${servicesHtml}</ul>
+      </section>
+      ${(order.produtos?.length ?? 0) > 0 ? `<section class="section"><h3>Produtos vendidos</h3><ul>${productsHtml}</ul></section>` : ''}
+    </div>
 
-    <section class="section">
-      <h3>Produtos vendidos na OS</h3>
-      <ul>${productsHtml}</ul>
-    </section>
+    ${order.diagnosticos.length > 0 ? `<section class="section"><h3>Diagnóstico / itens não autorizados</h3><p class="terms">Itens identificados na avaliação e não autorizados pelo responsável nesta OS.</p><p class="terms warranty-note">* A garantia dos serviços efetuados só é validada mediante a execução do diagnóstico apresentado.</p><ul>${diagnosticsHtml}</ul></section>` : ''}
 
-    <section class="section">
-      <h3>Diagnóstico / itens identificados não autorizados</h3>
-      <p class="terms">Os itens abaixo foram identificados durante a avaliação, mas não foram autorizados pelo responsável no momento desta OS.</p>
-      <p class="terms warranty-note">* A garantia dos serviços efetuados, só é validada mediante a execução do diagnóstico apresentado</p>
-      <ul>${diagnosticsHtml}</ul>
-    </section>
+    ${optionalSections ? `<div class="notes-grid">${optionalSections}</div>` : ''}
 
-    <section class="section">
-      <h3>Observações</h3>
-      <p>${escapeHtml(order.observacoes || 'Sem observações.')}</p>
-    </section>
+    ${photosHtml ? `<section class="section"><h3>Fotos da OS</h3><div class="photos-grid">${photosHtml}</div></section>` : ''}
 
-    <section class="section">
-      <h3>Fotos da OS</h3>
-      <div class="photos-grid">${photosHtml}</div>
-    </section>
-
+    <div class="closing-grid">
     <section class="section">
       <h3>Pagamento</h3>
       <div class="grid">
@@ -260,8 +269,9 @@ export function buildOrderPrintHtml(order: PrintableOrder, logoUrl?: string) {
         <span>${formatMoney(order.valor_final || order.valor_total || 0)}</span>
       </div>
     </section>
+    </div>
 
-    <p class="terms">
+    <p class="terms declaration">
       Declaro estar ciente dos serviços executados/autorizados, dos diagnósticos registrados e das condições descritas nesta ordem de serviço.
     </p>
 
@@ -283,6 +293,20 @@ export function buildOrderPrintHtml(order: PrintableOrder, logoUrl?: string) {
       <div class="signature">Responsável pela oficina</div>
     </div>
   </main>
+  <script>
+    function fitOrderToSinglePage() {
+      var sheet = document.querySelector('.sheet');
+      if (!sheet) return;
+      sheet.style.zoom = '1';
+      var printableHeight = 1010;
+      var contentHeight = sheet.scrollHeight;
+      if (contentHeight > printableHeight) {
+        sheet.style.zoom = String(printableHeight / contentHeight);
+      }
+    }
+    window.addEventListener('beforeprint', fitOrderToSinglePage);
+    window.addEventListener('load', fitOrderToSinglePage);
+  </script>
 </body>
 </html>`
 }

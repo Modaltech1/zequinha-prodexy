@@ -70,6 +70,7 @@ export type OrdemServicoEdit = {
   valor_total: number | null
   valor_final: number | null
   status: string | null
+  reclame: string | null
   observacoes: string | null
   criado_em: string
   atualizado_em: string | null
@@ -382,6 +383,7 @@ export function OrderForm({
   const [kmEntrada, setKmEntrada] = useState('')
 
   const [status, setStatus] = useState('em_andamento')
+  const [reclame, setReclame] = useState('')
   const [observacoes, setObservacoes] = useState('')
   const [responsavelId, setResponsavelId] = useState('')
   const [maoDeObra, setMaoDeObra] = useState('')
@@ -505,6 +507,7 @@ export function OrderForm({
       setVeiculoTemSeguro(Boolean(order.veiculo_tem_seguro))
       setKmEntrada(order.km_entrada ? String(order.km_entrada) : '')
       setStatus(order.status || 'em_andamento')
+      setReclame(order.reclame || '')
       setResponsavelId(order.responsavel_id || '')
       setMaoDeObra(formatMoneyInput(order.mao_de_obra))
       setAcrescimos(formatMoneyInput(order.acrescimos))
@@ -560,6 +563,7 @@ export function OrderForm({
       setVeiculoTemSeguro(false)
       setKmEntrada('')
       setStatus('em_andamento')
+      setReclame('')
       setResponsavelId('')
       setMaoDeObra('')
       setAcrescimos('')
@@ -1060,6 +1064,7 @@ export function OrderForm({
         valor_total: subtotalServicosToPersist + subtotalProdutosToPersist,
         valor_final: valorFinalToPersist,
         status,
+        reclame: reclame.trim() || null,
         observacoes: observacoes.trim() || null,
         atualizado_em: new Date().toISOString(),
       }
@@ -1823,6 +1828,19 @@ export function OrderForm({
           </div>
 
           <p className="text-xs text-muted-foreground">{totalFotos}/5 imagens</p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="reclame">Reclame</Label>
+          <Textarea
+            id="reclame"
+            value={reclame}
+            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setReclame(e.target.value)}
+            placeholder="Relato do cliente sobre o veículo na chegada..."
+          />
+          <p className="text-xs text-muted-foreground">
+            Registre, nas palavras do cliente, o motivo que trouxe o veículo à oficina.
+          </p>
         </div>
 
         <div className="space-y-2">
