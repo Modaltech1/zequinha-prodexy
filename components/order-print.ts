@@ -87,30 +87,30 @@ export function buildOrderPrintHtml(order: PrintableOrder, logoUrl?: string) {
       const quantidade = Math.max(1, Number(item.quantidade || 1))
       const valorUnitario = Number(item.valor || 0)
       const valorLinha = valorUnitario * quantidade
-      const parts = [
-        `<strong>${escapeHtml(item.nome)} x${quantidade}</strong>`,
-        item.codigo_peca ? `Código peça: ${escapeHtml(item.codigo_peca)}` : '',
-        item.observacao ? `Obs: ${escapeHtml(item.observacao)}` : '',
-        valorLinha > 0 ? `Valor: ${escapeHtml(formatMoney(valorLinha))}` : '',
-      ].filter(Boolean)
-      return `<li>${parts.join(' • ')}</li>`
+      const details = [
+        item.codigo_peca ? `Código: ${escapeHtml(item.codigo_peca)}` : '',
+        item.observacao ? escapeHtml(item.observacao) : '',
+      ].filter(Boolean).join(' | ')
+      const detailHtml = details ? `<span class="item-detail">${details}</span>` : ''
+      const priceHtml = valorLinha > 0 ? escapeHtml(formatMoney(valorLinha)) : '-'
+      return `<tr><td><strong>${escapeHtml(item.nome)}</strong> <span class="quantity">x${quantidade}</span>${detailHtml}</td><td class="money">${priceHtml}</td></tr>`
     }).join('')
-    : '<li>Nenhum serviço registrado.</li>'
+    : '<tr><td colspan="2" class="empty-row">Nenhum serviço registrado.</td></tr>'
   const productsHtml = (order.produtos?.length ?? 0) > 0
     ? order.produtos!.map((item) => {
       const quantidade = Math.max(1, Number(item.quantidade || 1))
       const valorUnitario = Number(item.valor_unitario || 0)
       const valorLinha = valorUnitario * quantidade
-      const parts = [
-        `<strong>${escapeHtml(item.nome)} x${quantidade}</strong>`,
-        item.marca_modelo ? `Marca/modelo: ${escapeHtml(item.marca_modelo)}` : '',
-        item.codigo ? `Código produto: ${escapeHtml(item.codigo)}` : '',
-        item.observacao ? `Obs: ${escapeHtml(item.observacao)}` : '',
-        valorLinha > 0 ? `Valor: ${escapeHtml(formatMoney(valorLinha))}` : '',
-      ].filter(Boolean)
-      return `<li>${parts.join(' • ')}</li>`
+      const details = [
+        item.marca_modelo ? escapeHtml(item.marca_modelo) : '',
+        item.codigo ? `Código: ${escapeHtml(item.codigo)}` : '',
+        item.observacao ? escapeHtml(item.observacao) : '',
+      ].filter(Boolean).join(' | ')
+      const detailHtml = details ? `<span class="item-detail">${details}</span>` : ''
+      const priceHtml = valorLinha > 0 ? escapeHtml(formatMoney(valorLinha)) : '-'
+      return `<tr><td><strong>${escapeHtml(item.nome)}</strong> <span class="quantity">x${quantidade}</span>${detailHtml}</td><td class="money">${priceHtml}</td></tr>`
     }).join('')
-    : '<li>Nenhum produto registrado.</li>'
+    : ''
   const diagnosticsHtml = order.diagnosticos
     .map((item) => `<li>${escapeHtml(item.descricao)}</li>`)
     .join('')
@@ -141,41 +141,49 @@ export function buildOrderPrintHtml(order: PrintableOrder, logoUrl?: string) {
     @page { size: A4; margin: 7mm; }
     * { box-sizing: border-box; }
     html, body { width: 100%; margin: 0; padding: 0; }
-    body { font-family: Arial, Helvetica, sans-serif; color: #111827; font-size: 9.5px; line-height: 1.25; }
-    .sheet { width: 100%; transform-origin: top left; }
-    .header { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1.5px solid #111827; padding-bottom: 6px; margin-bottom: 6px; }
-    .brand-row { display: flex; align-items: center; gap: 8px; }
-    .brand-logo { width: 46px; height: 46px; object-fit: contain; flex-shrink: 0; }
-    .brand h1 { margin: 0 0 2px; font-size: 16px; }
+    body { font-family: Arial, Helvetica, sans-serif; color: #111827; font-size: 11px; line-height: 1.3; }
+    .sheet { width: 196mm; margin: 0 auto; transform-origin: top left; }
+    .header { display: flex; justify-content: space-between; gap: 16px; border-bottom: 2px solid #111827; padding-bottom: 7px; margin-bottom: 7px; }
+    .brand-row { display: flex; align-items: center; gap: 10px; }
+    .brand-logo { width: 50px; height: 50px; object-fit: contain; flex-shrink: 0; }
+    .brand h1 { margin: 0 0 2px; font-size: 18px; letter-spacing: -.02em; }
     .muted { color: #4b5563; }
     .os-title { text-align: right; }
-    .os-title h2 { margin: 0 0 3px; font-size: 15px; }
-    .summary-grid, .items-grid, .notes-grid, .closing-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; align-items: start; }
+    .os-title h2 { margin: 0 0 3px; font-size: 17px; letter-spacing: -.01em; }
+    .summary-grid, .items-grid, .notes-grid, .closing-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
     .items-grid > .section:only-child, .notes-grid > .section:only-child { grid-column: 1 / -1; }
-    .section { border: 1px solid #d1d5db; border-radius: 5px; padding: 6px 7px; margin-bottom: 6px; break-inside: avoid; page-break-inside: avoid; }
-    .section h3 { margin: 0 0 4px; font-size: 10px; text-transform: uppercase; letter-spacing: .035em; }
+    .section { padding: 0; margin-bottom: 8px; break-inside: avoid; page-break-inside: avoid; }
+    .section h3 { margin: 0 0 5px; padding-bottom: 3px; border-bottom: 1px solid #9ca3af; font-size: 10.5px; text-transform: uppercase; letter-spacing: .055em; }
     .section p { margin: 0; white-space: pre-wrap; }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 9px; }
-    .label { color: #4b5563; font-size: 8.5px; display: block; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; }
+    .label { color: #4b5563; font-size: 9px; display: block; }
     .value { font-weight: 700; }
-    ul { margin: 2px 0 0 14px; padding: 0; }
-    li { margin-bottom: 2px; }
+    ul { margin: 3px 0 0 16px; padding: 0; }
+    li { margin-bottom: 3px; }
     li:last-child { margin-bottom: 0; }
-    .financial-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
+    .items-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .items-table td { padding: 3px 0; vertical-align: top; border-bottom: 1px solid #e5e7eb; }
+    .items-table tr:last-child td { border-bottom: 0; }
+    .items-table .money { width: 86px; padding-left: 10px; text-align: right; white-space: nowrap; font-weight: 700; }
+    .quantity { color: #4b5563; font-weight: 700; }
+    .item-detail { display: block; margin-top: 1px; color: #4b5563; font-size: 9.5px; }
+    .empty-row { color: #4b5563; }
+    .financial-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; }
     .financial-row:last-child { margin-bottom: 0; }
     .financial-row.discount { color: #b91c1c; }
-    .financial-row.final { border-top: 1px solid #d1d5db; margin-top: 4px; padding-top: 4px; font-size: 11px; font-weight: 700; }
-    .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 18px; }
-    .signature { border-top: 1px solid #111827; padding-top: 4px; text-align: center; }
-    .terms { font-size: 8px; line-height: 1.2; color: #374151; }
-    .legal-section { border-color: #9ca3af; background: #f9fafb; }
-    .legal-section .terms { margin: 0 0 3px; text-align: justify; }
+    .financial-row.final { border-top: 1px solid #9ca3af; margin-top: 4px; padding-top: 4px; font-size: 12px; font-weight: 700; }
+    .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 36px; margin-top: 20px; }
+    .signature { border-top: 1px solid #111827; padding-top: 5px; text-align: center; }
+    .terms { font-size: 9px; line-height: 1.25; color: #374151; }
+    .legal-section { margin-top: 2px; }
+    .legal-copy { columns: 2; column-gap: 18px; column-rule: 1px solid #e5e7eb; }
+    .legal-section .terms { margin: 0 0 4px; text-align: justify; break-inside: avoid; }
     .legal-section .terms:last-child { margin-bottom: 0; }
-    .warranty-note { margin-top: 3px !important; font-weight: 600; }
-    .photos-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-top: 3px; }
+    .warranty-note { margin-top: 4px !important; font-weight: 600; }
+    .photos-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-top: 4px; }
     .photo-item { margin: 0; break-inside: avoid; page-break-inside: avoid; }
-    .photo-item img { width: 100%; height: 56px; object-fit: cover; border: 1px solid #d1d5db; border-radius: 3px; display: block; }
-    .declaration { margin: 2px 0 6px; }
+    .photo-item img { width: 100%; height: 60px; object-fit: cover; border: 1px solid #d1d5db; display: block; }
+    .declaration { margin: 1px 0 7px; }
     @media print {
       .no-print { display: none; }
       html, body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
@@ -230,9 +238,9 @@ export function buildOrderPrintHtml(order: PrintableOrder, logoUrl?: string) {
     <div class="items-grid">
       <section class="section">
         <h3>Serviços autorizados</h3>
-        <ul>${servicesHtml}</ul>
+        <table class="items-table"><tbody>${servicesHtml}</tbody></table>
       </section>
-      ${(order.produtos?.length ?? 0) > 0 ? `<section class="section"><h3>Produtos vendidos</h3><ul>${productsHtml}</ul></section>` : ''}
+      ${(order.produtos?.length ?? 0) > 0 ? `<section class="section"><h3>Produtos vendidos</h3><table class="items-table"><tbody>${productsHtml}</tbody></table></section>` : ''}
     </div>
 
     ${order.diagnosticos.length > 0 ? `<section class="section"><h3>Diagnóstico / itens não autorizados</h3><p class="terms">Itens identificados na avaliação e não autorizados pelo responsável nesta OS.</p><p class="terms warranty-note">* A garantia dos serviços efetuados só é validada mediante a execução do diagnóstico apresentado.</p><ul>${diagnosticsHtml}</ul></section>` : ''}
@@ -277,6 +285,7 @@ export function buildOrderPrintHtml(order: PrintableOrder, logoUrl?: string) {
 
     <section class="section legal-section">
       <h3>Informa&ccedil;&otilde;es sobre pe&ccedil;as, nota fiscal e garantia</h3>
+      <div class="legal-copy">
       <p class="terms">
         As pe&ccedil;as aplicadas nesta ordem de servi&ccedil;o s&atilde;o adquiridas por esta empresa diretamente junto a seus fornecedores, conforme crit&eacute;rio t&eacute;cnico e necessidade do servi&ccedil;o. A nota fiscal de compra emitida pelo fornecedor integra os controles internos da empresa e n&atilde;o &eacute; fornecida ao cliente.
       </p>
@@ -286,6 +295,7 @@ export function buildOrderPrintHtml(order: PrintableOrder, logoUrl?: string) {
       <p class="terms">
         Em cumprimento ao C&oacute;digo de Defesa do Consumidor, esta empresa assume integral responsabilidade pela escolha, qualidade, instala&ccedil;&atilde;o e garantia das pe&ccedil;as aplicadas, bem como pela execu&ccedil;&atilde;o dos servi&ccedil;os realizados, preservados todos os direitos do cliente, inclusive a garantia legal de 90 dias sobre m&atilde;o de obra e pe&ccedil;as instaladas.
       </p>
+      </div>
     </section>
 
     <div class="signatures">
@@ -297,11 +307,27 @@ export function buildOrderPrintHtml(order: PrintableOrder, logoUrl?: string) {
     function fitOrderToSinglePage() {
       var sheet = document.querySelector('.sheet');
       if (!sheet) return;
+      var pageWidthMm = 196;
+      var pageHeightMm = 281;
       sheet.style.zoom = '1';
-      var printableHeight = 1010;
-      var contentHeight = sheet.scrollHeight;
-      if (contentHeight > printableHeight) {
-        sheet.style.zoom = String(printableHeight / contentHeight);
+      sheet.style.width = pageWidthMm + 'mm';
+
+      var probe = document.createElement('div');
+      probe.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:' + pageHeightMm + 'mm;';
+      document.body.appendChild(probe);
+      var printableHeight = probe.getBoundingClientRect().height;
+      probe.remove();
+
+      var contentHeight = sheet.getBoundingClientRect().height;
+      if (contentHeight <= printableHeight) return;
+
+      var scale = printableHeight / contentHeight;
+      for (var attempt = 0; attempt < 4; attempt += 1) {
+        sheet.style.zoom = String(scale);
+        sheet.style.width = (pageWidthMm / scale) + 'mm';
+        contentHeight = sheet.getBoundingClientRect().height;
+        if (contentHeight <= printableHeight) break;
+        scale = scale * (printableHeight / contentHeight) * 0.995;
       }
     }
     window.addEventListener('beforeprint', fitOrderToSinglePage);
