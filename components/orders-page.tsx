@@ -45,6 +45,7 @@ type OrdemRow = {
   valor_final: number | null
   status: string | null
   reclame: string | null
+  relatorio_tecnico: string | null
   observacoes: string | null
   criado_em: string
   atualizado_em: string | null
@@ -141,7 +142,7 @@ type Feedback = { type: 'success' | 'error'; message: string }
 
 const ACTIVE_ORDER_STATUSES = ['agendada', 'aberta', 'em_andamento']
 const ORDER_SELECT =
-  'id,numero,cliente_id,veiculo_id,veiculo_placa,veiculo_marca,veiculo_modelo,veiculo_ano,veiculo_cor,veiculo_tem_seguro,valor_total,valor_final,status,reclame,observacoes,criado_em,atualizado_em,km_entrada,mao_de_obra,acrescimos,desconto,responsavel_id,forma_pagamento' as const
+  'id,numero,cliente_id,veiculo_id,veiculo_placa,veiculo_marca,veiculo_modelo,veiculo_ano,veiculo_cor,veiculo_tem_seguro,valor_total,valor_final,status,reclame,relatorio_tecnico,observacoes,criado_em,atualizado_em,km_entrada,mao_de_obra,acrescimos,desconto,responsavel_id,forma_pagamento' as const
 
 function getPeriodRange(filter: PeriodFilter) {
   if (filter === 'todos') return null
@@ -452,6 +453,7 @@ export function OrdersPage({
       valor_total: Number(order.valor_total || 0),
       valor_final: Number(order.valor_final || 0),
       reclame: order.reclame,
+      relatorio_tecnico: order.relatorio_tecnico,
       observacoes: order.observacoes,
       criado_em: order.criado_em,
       atualizado_em: order.atualizado_em,

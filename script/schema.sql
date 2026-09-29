@@ -48,6 +48,7 @@ create table public.ordens_de_servico (
   valor_final numeric(12, 2) null default 0,
   status text null default 'em_andamento'::text,
   reclame text null,
+  relatorio_tecnico text null,
   observacoes text null,
   criado_por uuid null,
   criado_em timestamp with time zone null default now(),

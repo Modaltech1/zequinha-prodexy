@@ -71,6 +71,7 @@ export type OrdemServicoEdit = {
   valor_final: number | null
   status: string | null
   reclame: string | null
+  relatorio_tecnico: string | null
   observacoes: string | null
   criado_em: string
   atualizado_em: string | null
@@ -384,6 +385,7 @@ export function OrderForm({
 
   const [status, setStatus] = useState('em_andamento')
   const [reclame, setReclame] = useState('')
+  const [relatorioTecnico, setRelatorioTecnico] = useState('')
   const [observacoes, setObservacoes] = useState('')
   const [responsavelId, setResponsavelId] = useState('')
   const [maoDeObra, setMaoDeObra] = useState('')
@@ -508,6 +510,7 @@ export function OrderForm({
       setKmEntrada(order.km_entrada ? String(order.km_entrada) : '')
       setStatus(order.status || 'em_andamento')
       setReclame(order.reclame || '')
+      setRelatorioTecnico(order.relatorio_tecnico || '')
       setResponsavelId(order.responsavel_id || '')
       setMaoDeObra(formatMoneyInput(order.mao_de_obra))
       setAcrescimos(formatMoneyInput(order.acrescimos))
@@ -564,6 +567,7 @@ export function OrderForm({
       setKmEntrada('')
       setStatus('em_andamento')
       setReclame('')
+      setRelatorioTecnico('')
       setResponsavelId('')
       setMaoDeObra('')
       setAcrescimos('')
@@ -1065,6 +1069,7 @@ export function OrderForm({
         valor_final: valorFinalToPersist,
         status,
         reclame: reclame.trim() || null,
+        relatorio_tecnico: relatorioTecnico.trim() || null,
         observacoes: observacoes.trim() || null,
         atualizado_em: new Date().toISOString(),
       }
@@ -1840,6 +1845,19 @@ export function OrderForm({
           />
           <p className="text-xs text-muted-foreground">
             Registre, nas palavras do cliente, o motivo que trouxe o veículo à oficina.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="relatorio-tecnico">Relatório técnico</Label>
+          <Textarea
+            id="relatorio-tecnico"
+            value={relatorioTecnico}
+            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setRelatorioTecnico(e.target.value)}
+            placeholder="Diagnóstico, verificações e serviços executados com base no reclame..."
+          />
+          <p className="text-xs text-muted-foreground">
+            Descreva o que foi constatado e realizado em resposta ao relato do cliente.
           </p>
         </div>
 

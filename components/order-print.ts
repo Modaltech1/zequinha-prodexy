@@ -5,6 +5,7 @@ export type PrintableOrder = {
   valor_total: number
   valor_final: number
   reclame?: string | null
+  relatorio_tecnico?: string | null
   observacoes: string | null
   criado_em: string
   atualizado_em: string | null
@@ -123,14 +124,17 @@ export function buildOrderPrintHtml(order: PrintableOrder, logoUrl?: string) {
       .join('')
     : ''
 
-  const optionalSections = [
+  const serviceNarrativeSections = [
     order.reclame
       ? `<section class="section note-section"><h3>Reclame</h3><p>${escapeHtml(order.reclame)}</p></section>`
       : '',
-    order.observacoes
-      ? `<section class="section note-section"><h3>Observações</h3><p>${escapeHtml(order.observacoes)}</p></section>`
+    order.relatorio_tecnico
+      ? `<section class="section note-section"><h3>Relatório técnico</h3><p>${escapeHtml(order.relatorio_tecnico)}</p></section>`
       : '',
   ].filter(Boolean).join('')
+  const observationsSection = order.observacoes
+    ? `<section class="section note-section"><h3>Observações</h3><p>${escapeHtml(order.observacoes)}</p></section>`
+    : ''
 
   return `<!doctype html>
 <html lang="pt-BR">
@@ -245,7 +249,9 @@ export function buildOrderPrintHtml(order: PrintableOrder, logoUrl?: string) {
 
     ${order.diagnosticos.length > 0 ? `<section class="section"><h3>Diagnóstico / itens não autorizados</h3><p class="terms">Itens identificados na avaliação e não autorizados pelo responsável nesta OS.</p><p class="terms warranty-note">* A garantia dos serviços efetuados só é validada mediante a execução do diagnóstico apresentado.</p><ul>${diagnosticsHtml}</ul></section>` : ''}
 
-    ${optionalSections ? `<div class="notes-grid">${optionalSections}</div>` : ''}
+    ${serviceNarrativeSections ? `<div class="notes-grid">${serviceNarrativeSections}</div>` : ''}
+
+    ${observationsSection}
 
     ${photosHtml ? `<section class="section"><h3>Fotos da OS</h3><div class="photos-grid">${photosHtml}</div></section>` : ''}
 

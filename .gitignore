@@ -8,6 +8,7 @@
 !/script/migration_produtos_catalogo_completo.sql
 !/script/migration_codigos_repasses_parceria.sql
 !/script/migration_reclame_ordem_servico.sql
+!/script/migration_relatorio_tecnico_ordem_servico.sql
 !/script/schema.sql
 .next*
 # dependencies

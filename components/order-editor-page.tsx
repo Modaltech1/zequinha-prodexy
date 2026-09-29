@@ -22,6 +22,7 @@ type OrdemRow = {
   valor_final: number | null
   status: string | null
   reclame: string | null
+  relatorio_tecnico: string | null
   observacoes: string | null
   criado_em: string
   atualizado_em: string | null
@@ -346,6 +347,7 @@ export function OrderEditorPage({
         valor_final: Number(row.valor_final || 0),
         status: normalizeOrderStatus(row.status),
         reclame: row.reclame,
+        relatorio_tecnico: row.relatorio_tecnico,
         observacoes: row.observacoes,
         criado_em: row.criado_em,
         atualizado_em: row.atualizado_em,

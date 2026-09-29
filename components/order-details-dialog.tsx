@@ -141,6 +141,12 @@ export function OrderDetailsDialog({
             </Section>
           )}
 
+          {order.relatorio_tecnico && (
+            <Section title="Relatório técnico">
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">{order.relatorio_tecnico}</p>
+            </Section>
+          )}
+
           <Section title="Resumo financeiro">
             <div className="grid gap-2 text-sm sm:grid-cols-2">
               <p>Valor total: <span className="font-medium">R$ {Number(order.valor_total || 0).toFixed(2)}</span></p>
