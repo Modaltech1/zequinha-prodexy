@@ -180,8 +180,8 @@ export function buildOrderPrintHtml(order: PrintableOrder, logoUrl?: string) {
     .signature { border-top: 1px solid #111827; padding-top: 5px; text-align: center; }
     .terms { font-size: 9px; line-height: 1.25; color: #374151; }
     .legal-section { margin-top: 2px; }
-    .legal-copy { columns: 2; column-gap: 18px; column-rule: 1px solid #e5e7eb; }
-    .legal-section .terms { margin: 0 0 4px; text-align: justify; break-inside: avoid; }
+    .legal-copy { width: 100%; }
+    .legal-section .terms { margin: 0 0 3px; text-align: justify; break-inside: avoid; }
     .legal-section .terms:last-child { margin-bottom: 0; }
     .warranty-note { margin-top: 4px !important; font-weight: 600; }
     .photos-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-top: 4px; }
