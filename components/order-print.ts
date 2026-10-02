@@ -213,7 +213,7 @@ export function buildOrderPrintHtml(order: PrintableOrder, logoUrl?: string) {
         <div><strong>Nº:</strong> ${escapeHtml(order.numero)}</div>
         <div><strong>Status:</strong> ${escapeHtml(formatStatus(order.status))}</div>
         <div><strong>Responsável:</strong> ${escapeHtml(order.responsavel_nome || '-')}</div>
-        <div><strong>Emitida em:</strong> ${escapeHtml(formatDate(order.atualizado_em || order.criado_em))}</div>
+        <div><strong>Emitida em:</strong> ${escapeHtml(formatDate(order.criado_em))}</div>
       </div>
     </div>
 
