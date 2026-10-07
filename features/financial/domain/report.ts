@@ -9,6 +9,13 @@ export const FINANCIAL_ORDER_STATUSES = [
 
 export type FinancialOrderStatus = (typeof FINANCIAL_ORDER_STATUSES)[number]
 export type FinancialStatusFilter = FinancialOrderStatus | 'todos'
+export const FINANCIAL_PARTNER_SCOPES = ['todos', 'parceiro'] as const
+export type FinancialPartnerScope = (typeof FINANCIAL_PARTNER_SCOPES)[number]
+
+export const FINANCIAL_PARTNER_SCOPE_LABELS: Record<FinancialPartnerScope, string> = {
+  todos: 'Todas as OS',
+  parceiro: 'Parceria PL0826',
+}
 
 export const UNASSIGNED_FILTER = '__none'
 
@@ -19,6 +26,7 @@ export type FinancialReportFilters = {
   customerId: string
   responsibleId: string
   paymentMethod: string
+  partnerScope: FinancialPartnerScope
   search: string
 }
 
@@ -208,6 +216,7 @@ export function parseFinancialReportFilters(
   const customerId = readParam(params, 'customerId', 50)
   const responsibleId = readParam(params, 'responsibleId', 50)
   const paymentMethod = readParam(params, 'paymentMethod', 80)
+  const partnerScope = readParam(params, 'partnerScope', 30) || 'todos'
   const search = readParam(params, 'search', 120)
 
   if (Boolean(startDate) !== Boolean(endDate)) {
@@ -228,6 +237,9 @@ export function parseFinancialReportFilters(
   if (responsibleId && responsibleId !== UNASSIGNED_FILTER && !UUID_PATTERN.test(responsibleId)) {
     return { ok: false, message: 'O responsável selecionado é inválido.' }
   }
+  if (!FINANCIAL_PARTNER_SCOPES.some((scope) => scope === partnerScope)) {
+    return { ok: false, message: 'A relação comercial selecionada é inválida.' }
+  }
 
   return {
     ok: true,
@@ -238,9 +250,17 @@ export function parseFinancialReportFilters(
       customerId,
       responsibleId,
       paymentMethod,
+      partnerScope: partnerScope as FinancialPartnerScope,
       search,
     },
   }
+}
+
+export function matchesPartnerScope(
+  order: Pick<FinancialOrder, 'products'>,
+  scope: FinancialPartnerScope
+): boolean {
+  return scope === 'todos' || order.products.some((product) => product.isPartnerProduct)
 }
 
 function sum(orders: FinancialOrder[], field: keyof Pick<

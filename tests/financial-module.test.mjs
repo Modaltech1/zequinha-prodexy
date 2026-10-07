@@ -52,6 +52,18 @@ test('o relatório usa o snapshot e exibe a memória de cálculo da parceria', a
   assert.match(page, /Somente produtos com código iniciado por PL0826- em OS finalizadas/)
 })
 
+test('o relatório permite limitar toda a visão às OS da parceria PL0826', async () => {
+  const [repository, page] = await Promise.all([
+    readFile(repositoryPath, 'utf8'),
+    readFile(reportPagePath, 'utf8'),
+  ])
+
+  assert.match(repository, /matchesPartnerScope\(order, filters\.partnerScope\)/)
+  assert.match(page, /Relação comercial/)
+  assert.match(page, /FINANCIAL_PARTNER_SCOPE_LABELS/)
+  assert.match(page, /possuem ao menos um produto com código PL0826-/)
+})
+
 test('o relatório exibe mão de obra agrupada por responsável na tela e no PDF', async () => {
   const page = await readFile(reportPagePath, 'utf8')
 

@@ -1,6 +1,7 @@
 import { brand } from '@/branding/brand'
 import {
   FINANCIAL_ORDER_STATUSES,
+  matchesPartnerScope,
   normalizeSearchText,
   summarizeFinancialOrders,
   UNASSIGNED_FILTER,
@@ -383,7 +384,10 @@ export async function loadFinancialReport(input: {
       discount: toMoney(row.desconto),
       finalTotal: toMoney(row.valor_final ?? row.valor_total),
     }
-  }).filter((order) => matchesSearch(order, filters.search))
+  }).filter((order) => (
+    matchesPartnerScope(order, filters.partnerScope)
+    && matchesSearch(order, filters.search)
+  ))
 
   return {
     generatedAt: new Date().toISOString(),

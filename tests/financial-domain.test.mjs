@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
   calculatePartnerTransfer,
+  matchesPartnerScope,
   parseFinancialReportFilters,
   summarizeFinancialOrders,
 } from '../features/financial/domain/report.ts'
@@ -54,8 +55,10 @@ test('valida filtros, período e identificadores recebidos pela API', () => {
     endDate: '2026-08-31',
     status: 'finalizada',
     customerId: '11111111-1111-4111-8111-111111111111',
+    partnerScope: 'parceiro',
   }))
   assert.equal(valid.ok, true)
+  assert.equal(valid.value.partnerScope, 'parceiro')
 
   const missingEnd = parseFinancialReportFilters(new URLSearchParams({ startDate: '2026-08-01' }))
   assert.deepEqual(missingEnd, {
@@ -65,6 +68,27 @@ test('valida filtros, período e identificadores recebidos pela API', () => {
 
   const invalidCustomer = parseFinancialReportFilters(new URLSearchParams({ customerId: 'invalido' }))
   assert.equal(invalidCustomer.ok, false)
+
+  const invalidPartnerScope = parseFinancialReportFilters(new URLSearchParams({ partnerScope: 'invalido' }))
+  assert.deepEqual(invalidPartnerScope, {
+    ok: false,
+    message: 'A relação comercial selecionada é inválida.',
+  })
+
+  const defaultScope = parseFinancialReportFilters(new URLSearchParams())
+  assert.equal(defaultScope.ok, true)
+  assert.equal(defaultScope.value.partnerScope, 'todos')
+})
+
+test('filtra OS que possuem ao menos um produto da parceria PL0826', () => {
+  const regularOrder = order()
+  const partnerOrder = order({
+    products: [product({ code: 'PL0826-12', isPartnerProduct: true })],
+  })
+
+  assert.equal(matchesPartnerScope(regularOrder, 'todos'), true)
+  assert.equal(matchesPartnerScope(regularOrder, 'parceiro'), false)
+  assert.equal(matchesPartnerScope(partnerOrder, 'parceiro'), true)
 })
 
 test('consolida indicadores, mão de obra por cliente e vendas por produto', () => {

@@ -34,10 +34,13 @@ import { ListPagination } from '@/components/list-pagination'
 import { getFinancialReport } from '@/features/financial/client/financial-api'
 import {
   FINANCIAL_ORDER_STATUSES,
+  FINANCIAL_PARTNER_SCOPES,
+  FINANCIAL_PARTNER_SCOPE_LABELS,
   FINANCIAL_STATUS_LABELS,
   UNASSIGNED_FILTER,
   type CustomerLaborSummary,
   type FinancialOrder,
+  type FinancialPartnerScope,
   type FinancialReport,
   type FinancialReportFilters,
   type FinancialStatusFilter,
@@ -108,6 +111,7 @@ function initialFilters(): FinancialReportFilters {
     customerId: '',
     responsibleId: '',
     paymentMethod: '',
+    partnerScope: 'todos',
     search: '',
   }
 }
@@ -344,7 +348,7 @@ function PrintReport({ report }: { report: FinancialReport }) {
         </div>
         <div className={styles.printTitle}>
           <h1>Relatório financeiro</h1>
-          <p>Período: {periodLabel(report.filters)} · Gerado em {formatDateTime(report.generatedAt)}</p>
+          <p>Período: {periodLabel(report.filters)} · Relação: {FINANCIAL_PARTNER_SCOPE_LABELS[report.filters.partnerScope]} · Gerado em {formatDateTime(report.generatedAt)}</p>
         </div>
       </header>
 
@@ -535,9 +539,13 @@ export function FinancialReportPage() {
                 <div className="space-y-2"><label htmlFor="financial-customer" className="text-sm font-medium">Cliente</label><Select value={filters.customerId || ALL_FILTER} onValueChange={(value: string) => setFilter('customerId', value === ALL_FILTER ? '' : value)}><SelectTrigger id="financial-customer" className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value={ALL_FILTER}>Todos os clientes</SelectItem>{(report?.filterOptions.customers || []).map((option) => <SelectItem key={option.id} value={option.id}>{option.label}</SelectItem>)}</SelectContent></Select></div>
                 <div className="space-y-2"><label htmlFor="financial-responsible" className="text-sm font-medium">Responsável</label><Select value={filters.responsibleId || ALL_FILTER} onValueChange={(value: string) => setFilter('responsibleId', value === ALL_FILTER ? '' : value)}><SelectTrigger id="financial-responsible" className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value={ALL_FILTER}>Todos os responsáveis</SelectItem><SelectItem value={UNASSIGNED_FILTER}>Não informado</SelectItem>{(report?.filterOptions.responsibles || []).map((option) => <SelectItem key={option.id} value={option.id}>{option.label}</SelectItem>)}</SelectContent></Select></div>
                 <div className="space-y-2"><label htmlFor="financial-payment" className="text-sm font-medium">Forma de pagamento</label><Select value={filters.paymentMethod || ALL_FILTER} onValueChange={(value: string) => setFilter('paymentMethod', value === ALL_FILTER ? '' : value)}><SelectTrigger id="financial-payment" className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value={ALL_FILTER}>Todas as formas</SelectItem><SelectItem value={UNASSIGNED_FILTER}>Não informada</SelectItem>{(report?.filterOptions.paymentMethods || []).map((method) => <SelectItem key={method} value={method}>{method}</SelectItem>)}</SelectContent></Select></div>
-                <div className="space-y-2"><label htmlFor="financial-search" className="text-sm font-medium">Busca</label><div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input id="financial-search" value={filters.search} onChange={(event: ChangeEvent<HTMLInputElement>) => setFilter('search', event.target.value)} className="pl-9" placeholder="OS, cliente, placa, item..." /></div></div>
+                <div className="space-y-2"><label htmlFor="financial-partner-scope" className="text-sm font-medium">Relação comercial</label><Select value={filters.partnerScope} onValueChange={(value: string) => setFilter('partnerScope', value as FinancialPartnerScope)}><SelectTrigger id="financial-partner-scope" className="w-full"><SelectValue /></SelectTrigger><SelectContent>{FINANCIAL_PARTNER_SCOPES.map((scope) => <SelectItem key={scope} value={scope}>{FINANCIAL_PARTNER_SCOPE_LABELS[scope]}</SelectItem>)}</SelectContent></Select></div>
               </div>
-              <div className="flex flex-col gap-2 sm:flex-row sm:justify-end"><Button variant="outline" onClick={resetFilters} className="gap-2"><FilterX className="h-4 w-4" />Limpar filtros</Button><Button onClick={applyFilters} disabled={loading} className="gap-2"><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />Aplicar filtros</Button></div>
+              <div className="flex flex-col gap-3 xl:flex-row xl:items-end">
+                <div className="min-w-0 flex-1 space-y-2"><label htmlFor="financial-search" className="text-sm font-medium">Busca</label><div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input id="financial-search" value={filters.search} onChange={(event: ChangeEvent<HTMLInputElement>) => setFilter('search', event.target.value)} className="pl-9" placeholder="OS, cliente, placa, item..." /></div></div>
+                <div className="flex flex-col gap-2 sm:flex-row xl:shrink-0"><Button variant="outline" onClick={resetFilters} className="gap-2"><FilterX className="h-4 w-4" />Limpar filtros</Button><Button onClick={applyFilters} disabled={loading} className="gap-2"><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />Aplicar filtros</Button></div>
+              </div>
+              <p className="text-xs text-muted-foreground">“Parceria PL0826” limita todo o relatório às OS que possuem ao menos um produto com código PL0826-.</p>
             </CardContent>
           </Card>
 

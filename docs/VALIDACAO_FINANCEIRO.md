@@ -5,7 +5,8 @@
 O módulo `/admin/financeiro` é uma área administrativa exclusivamente de leitura. Ele consolida as ordens de serviço com os mesmos filtros em todos os indicadores, tabelas e no documento impresso:
 
 - período predefinido ou personalizado;
-- status, cliente, responsável e forma de pagamento;
+- status, cliente, responsável, forma de pagamento e relação comercial;
+- recorte opcional das OS que possuem ao menos um produto da parceria `PL0826-`;
 - busca por OS, cliente, veículo, item, responsável ou pagamento;
 - total de OS, finalizadas, abertas, canceladas, clientes, valor final, tíquete médio e mão de obra;
 - distribuição por status e composição financeira;
@@ -49,6 +50,7 @@ O repasse considera somente OS com status `finalizada` dentro dos demais filtros
 
 - Compare um período curto com as ordens da tela administrativa.
 - Teste cada filtro isoladamente e depois em combinação.
+- Selecione “Parceria PL0826” e confirme que indicadores, tabelas, relação detalhada e impressão exibem somente OS que possuem ao menos um produto `PL0826-`.
 - Confira uma OS com serviço, produto, mão de obra, acréscimo e desconto.
 - Valide a soma de mão de obra de pelo menos dois clientes.
 - Valide a divisão de OS e mão de obra entre dois responsáveis e o agrupamento “Não informado”.
